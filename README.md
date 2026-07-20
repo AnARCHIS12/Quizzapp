@@ -75,6 +75,43 @@ Ouvrez votre navigateur sur http://localhost:7777.
 
 ---
 
+## Configuration Détaillée (Variables d'Environnement & Emails)
+
+Le comportement de l'application est contrôlé par les variables définies dans le fichier `.env` :
+
+### 1. Configuration des Mails (SMTP)
+L'application envoie des e-mails pour la validation de compte et la réinitialisation des mots de passe.
+*   **Mode Local / Débogage (Par défaut)** : Si vous laissez la variable `SMTP_HOST` vide, aucun e-mail n'est envoyé à l'extérieur. Ils sont tous interceptés et sauvegardés localement dans le fichier `logs/mail.log` pour inspection rapide.
+*   **Mode Production** : Renseignez vos accès SMTP dans le fichier `.env` :
+    ```env
+    SMTP_HOST=smtp.votre-fournisseur.com   # Hôte SMTP
+    SMTP_PORT=587                         # Port (587 TLS ou 465 SSL)
+    SMTP_USER=contact@votre-domaine.com    # Utilisateur SMTP
+    SMTP_PASS=mot_de_passe_securise       # Mot de passe SMTP
+    SMTP_SECURE=tls                       # Sécurité (tls ou ssl)
+    MAIL_FROM_ADDRESS=no-reply@domaine.com # Adresse de l'expéditeur
+    MAIL_FROM_NAME=Quizzapp               # Nom de l'expéditeur
+    ```
+
+### 2. Clé Secrète JWT (Sécurité)
+Il est impératif de modifier le secret utilisé pour signer les jetons d'authentification des sessions WebSocket :
+```env
+JWT_SECRET=une_cle_tres_longue_et_aleatoire_generer_pour_la_prod
+```
+
+### 3. Base de données : Initialisation & Réinitialisation
+Au premier lancement de `docker compose up -d`, la base de données est **automatiquement** créée et peuplée grâce aux scripts d'init SQL de Docker.
+Si vous souhaitez réinitialiser manuellement la base à blanc à tout moment, exécutez les commandes suivantes :
+```bash
+# 1. Recréer la structure des tables
+docker exec -i quizzapp_db mysql -uquizzapp_user -p"Qu1zzApp_S3cur3_P@ss!" quizzapp < database/migration.sql
+
+# 2. Injecter les données par défaut (quizzes politiques inclus)
+docker exec -i quizzapp_db mysql -uquizzapp_user -p"Qu1zzApp_S3cur3_P@ss!" quizzapp < database/seed.sql
+```
+
+---
+
 ## Comptes de Test Par Défaut
 
 *   **Administrateur** :
