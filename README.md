@@ -157,11 +157,11 @@ docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_WS" --p
 ```
 
 ### 4. Déployer sur un serveur distant
-Sur le VPS de production, clonez le projet et démarrez avec les images du registre :
+Sur le VPS de production, clonez le projet et démarrez avec les images du registre et le fichier Compose de production (qui route les ports 80/443 et partage le dossier Let's Encrypt) :
 ```bash
 DOCKER_IMAGE_PHP=votre-pseudo/quizzapp-php:latest \
 DOCKER_IMAGE_WS=votre-pseudo/quizzapp-websocket:latest \
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ---
@@ -179,7 +179,7 @@ Dans le tableau de bord de votre instance Dockhand :
 1. Choisissez **Git Repository** comme source de déploiement.
 2. Entrez l'URL publique de votre dépôt : `https://github.com/AnARCHIS12/Quizzapp.git`
 3. Spécifiez la branche : `main`
-4. Laissez le chemin du fichier de configuration Compose par défaut (`docker-compose.yml`).
+4. Spécifiez le chemin du fichier de configuration Compose sur **`docker-compose.prod.yml`** (pour router les ports SSL/HTTP et lier les certificats).
 
 ### 3. Configurer les variables d'environnement dans l'UI de Dockhand
 Dans la section **Environment Variables** (ou le formulaire `.env` intégré de Dockhand), ajoutez les paires de clés/valeurs requises :
