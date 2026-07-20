@@ -11,51 +11,100 @@ services:
       MYSQL_PASSWORD: ${DB_PASS}
     volumes:
       - db_data:/var/lib/mysql
-      - ./database/migration.sql:/docker-entrypoint-initdb.d/01_migration.sql
-      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 10
 
-  # 2. PHP-FPM Application Service (Image du Registre)
+  # 2. PHP-FPM Application (image pré-construite depuis Docker Hub)
   php:
     image: ${DOCKER_IMAGE_PHP:-liberchat/quizzapp-php:latest}
     container_name: quizzapp_php
     restart: always
-    volumes:
-      - ./logs:/var/www/logs
-    env_file:
-      - .env
+    environment:
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-quizzapp}
+      DB_USER: ${DB_USER:-quizzapp_user}
+      DB_PASS: ${DB_PASS}
+      JWT_SECRET: ${JWT_SECRET}
+      WS_HOST: ${WS_HOST}
+      WS_PORT: ${WS_PORT:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-tls}
+      SMTP_ALLOW_SELF_SIGNED: ${SMTP_ALLOW_SELF_SIGNED:-false}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@quizapp.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Quizzapp}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-small-latest}
     depends_on:
       db:
         condition: service_healthy
 
-  # 3. WebSocket Ratchet Server Daemon (Image du Registre)
+  # 3. WebSocket Ratchet Server (image pré-construite depuis Docker Hub)
   websocket:
     image: ${DOCKER_IMAGE_WS:-liberchat/quizzapp-websocket:latest}
     container_name: quizzapp_websocket
     restart: always
     command: php bin/websocket.php
-    volumes:
-      - ./logs:/var/www/logs
-    env_file:
-      - .env
+    environment:
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-quizzapp}
+      DB_USER: ${DB_USER:-quizzapp_user}
+      DB_PASS: ${DB_PASS}
+      JWT_SECRET: ${JWT_SECRET}
+      WS_HOST: ${WS_HOST}
+      WS_PORT: ${WS_PORT:-}
     depends_on:
       db:
         condition: service_healthy
 
-  # 4. Nginx Web Server / Proxy Router (Exposé en HTTP pour Reverse Proxy Hôte)
+  # 4. Nginx — exposé sur APP_PORT pour reverse proxy hôte (Pangolin, Nginx, Traefik...)
   web:
     image: nginx:alpine
     container_name: quizzapp_web
     restart: always
     ports:
       - "${APP_PORT:-7777}:80"
-    volumes:
-      - ./public:/var/www/public
-      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf
+    command: >
+      sh -c "cat > /etc/nginx/conf.d/default.conf << 'NGINXEOF'
+      server {
+        listen 80;
+        server_name localhost;
+        root /var/www/public;
+        index index.php;
+        charset utf-8;
+        server_tokens off;
+        client_max_body_size 2M;
+        add_header X-Frame-Options \"DENY\" always;
+        add_header X-Content-Type-Options \"nosniff\" always;
+        add_header X-XSS-Protection \"1; mode=block\" always;
+        add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
+        location ~ /(composer\\.json|composer\\.lock|\\.env) { deny all; }
+        location /assets/uploads/ { location ~ \\.php$$ { deny all; } }
+        location / { try_files $$uri $$uri/ /index.php?$$query_string; }
+        location ~ \\.php$$ {
+          fastcgi_pass php:9000;
+          fastcgi_param SCRIPT_FILENAME $$document_root$$fastcgi_script_name;
+          include fastcgi_params;
+        }
+        location /ws {
+          proxy_pass http://websocket:8080;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $$http_upgrade;
+          proxy_set_header Connection \"Upgrade\";
+          proxy_set_header Host $$host;
+          proxy_read_timeout 86400s;
+        }
+        location ~ /\\.(?!well-known).* { deny all; }
+      }
+      NGINXEOF
+      nginx -g 'daemon off;'"
     depends_on:
       - php
       - websocket
