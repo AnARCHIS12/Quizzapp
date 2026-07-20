@@ -20,6 +20,7 @@ class MailerService
     private string $fromEmail;
     private string $fromName;
     private bool $useSMTP;
+    private bool $allowSelfSigned;
 
     public function __construct()
     {
@@ -31,6 +32,7 @@ class MailerService
         $this->fromEmail = $_ENV['MAIL_FROM_ADDRESS'] ?? 'no-reply@quizapp.local';
         $this->fromName = $_ENV['MAIL_FROM_NAME'] ?? 'Quizzapp';
         $this->useSMTP = !empty($this->host);
+        $this->allowSelfSigned = filter_var($_ENV['SMTP_ALLOW_SELF_SIGNED'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -67,6 +69,16 @@ class MailerService
             $mail->Password = $this->password;
             $mail->SMTPSecure = $this->encryption === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = $this->port;
+
+            if ($this->allowSelfSigned) {
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ];
+            }
 
             // Recipients
             $mail->setFrom($this->fromEmail, $this->fromName);
