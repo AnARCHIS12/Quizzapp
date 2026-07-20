@@ -36,7 +36,10 @@ if (file_exists($envFile)) {
     }
 }
 
-$port = (int) ($_ENV['WS_PORT'] ?? 8080);
+$configuredPort = $_ENV['WS_INTERNAL_PORT'] ?? getenv('WS_INTERNAL_PORT');
+$configuredPort = $configuredPort === false ? ($_ENV['WS_PORT'] ?? getenv('WS_PORT')) : $configuredPort;
+$configuredPort = $configuredPort === false ? null : $configuredPort;
+$port = $configuredPort !== null && $configuredPort !== '' ? (int) $configuredPort : 8080;
 
 echo "=============================================\n";
 echo " QUIZZAPP WEBSOCKET GAME DAEMON STARTED      \n";

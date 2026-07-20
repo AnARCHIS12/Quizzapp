@@ -11,23 +11,21 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Ensure registry image variables are defined
-if [ -z "$DOCKER_IMAGE_PHP" ] || [ -z "$DOCKER_IMAGE_WS" ]; then
+# Ensure registry image variable is defined
+if [ -z "$DOCKER_IMAGE_APP" ]; then
     echo "========================================================================="
-    echo " ATTENTION : Les variables DOCKER_IMAGE_PHP et DOCKER_IMAGE_WS ne sont"
+    echo " ATTENTION : La variable DOCKER_IMAGE_APP n'est"
     echo " pas définies ou décommentées dans votre fichier .env !"
     echo ""
-    echo " Veuillez d'abord configurer votre .env avec vos noms d'images cibles :"
-    echo "   DOCKER_IMAGE_PHP=votre-pseudo-dockerhub/quizzapp-php:latest"
-    echo "   DOCKER_IMAGE_WS=votre-pseudo-dockerhub/quizzapp-websocket:latest"
+    echo " Veuillez d'abord configurer votre .env avec votre image cible :"
+    echo "   DOCKER_IMAGE_APP=votre-pseudo-dockerhub/quizzapp-app:latest"
     echo "========================================================================="
     exit 1
 fi
 
 echo "========================================================================="
-echo " Commencer le build des images :"
-echo " - PHP-FPM : $DOCKER_IMAGE_PHP"
-echo " - WebSockets : $DOCKER_IMAGE_WS"
+echo " Commencer le build de l'image applicative :"
+echo " - App : $DOCKER_IMAGE_APP"
 echo "========================================================================="
 echo ""
 
@@ -42,15 +40,11 @@ echo ""
 
 echo "Lancement du build multi-plateforme (linux/amd64, linux/arm64) et push automatique..."
 
-# Build and push PHP image
-echo "-> Build & Push PHP-FPM image..."
-docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_PHP" --push .
-
-# Build and push WebSocket image
-echo "-> Build & Push WebSocket image..."
-docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_WS" --push .
+# Build and push app image
+echo "-> Build & Push App image..."
+docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.app -t "$DOCKER_IMAGE_APP" --push .
 
 echo ""
 echo "========================================================================="
-echo " SUCCÈS : Les images multi-plateformes (AMD64 + ARM64) ont été publiées !"
+echo " SUCCÈS : L'image multi-plateforme (AMD64 + ARM64) a été publiée !"
 echo "========================================================================="

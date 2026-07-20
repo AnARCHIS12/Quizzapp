@@ -12,16 +12,19 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=$$MYSQL_ROOT_PASSWORD --silent || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 30s
 
-  # 2. PHP-FPM Application (image pré-construite depuis Docker Hub)
-  php:
-    image: ${DOCKER_IMAGE_PHP:-liberchat/quizzapp-php:latest}
-    container_name: quizzapp_php
+  # 2. Application complète (Nginx + PHP-FPM + WebSocket)
+  app:
+    image: ${DOCKER_IMAGE_APP:-liberchat/quizzapp-app:latest}
+    container_name: quizzapp_app
     restart: always
+    ports:
+      - "${APP_PORT:-7777}:80"
     environment:
       DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-3306}
@@ -29,8 +32,10 @@ services:
       DB_USER: ${DB_USER:-quizzapp_user}
       DB_PASS: ${DB_PASS}
       JWT_SECRET: ${JWT_SECRET}
+      WS_URL: ${WS_URL:-}
       WS_HOST: ${WS_HOST}
       WS_PORT: ${WS_PORT:-}
+      WS_INTERNAL_PORT: ${WS_INTERNAL_PORT:-8080}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -44,36 +49,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-  # 3. WebSocket Ratchet Server (image pré-construite depuis Docker Hub)
-  websocket:
-    image: ${DOCKER_IMAGE_WS:-liberchat/quizzapp-websocket:latest}
-    container_name: quizzapp_websocket
-    restart: always
-    command: php bin/websocket.php
-    environment:
-      DB_HOST: ${DB_HOST:-db}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME:-quizzapp}
-      DB_USER: ${DB_USER:-quizzapp_user}
-      DB_PASS: ${DB_PASS}
-      JWT_SECRET: ${JWT_SECRET}
-      WS_HOST: ${WS_HOST}
-      WS_PORT: ${WS_PORT:-}
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # 4. Nginx — config intégrée dans l'image (reverse proxy hôte : Pangolin, Traefik...)
-  web:
-    image: ${DOCKER_IMAGE_NGINX:-liberchat/quizzapp-nginx:latest}
-    container_name: quizzapp_web
-    restart: always
-    ports:
-      - "${APP_PORT:-7777}:80"
-    depends_on:
-      - php
-      - websocket
 
 volumes:
   db_data:
