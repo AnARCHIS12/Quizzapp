@@ -138,18 +138,22 @@ DOCKER_IMAGE_WS=votre-pseudo-dockerhub/quizzapp-websocket:latest
 docker login
 ```
 
-### 3. Lancer le script automatique (build + push en une commande)
+### 3. Lancer le script automatique (build multi-plateforme AMD64 + ARM64 et push)
+Le script utilise `docker buildx` pour compiler les conteneurs pour les processeurs Intel/AMD et ARM (ex: serveurs Oracle ARM, Raspberry Pi, Apple Silicon) :
 ```bash
 ./bin/docker-build-push.sh
 ```
 
-Ou manuellement étape par étape :
+Ou manuellement en ligne de commande :
 ```bash
-# Build
-docker compose build php websocket
+# Activer le builder multi-plateforme
+docker buildx create --use --name quizzapp-builder || docker buildx use quizzapp-builder
 
-# Push
-docker compose push php websocket
+# Compiler et pousser l'image PHP (AMD64 + ARM64)
+docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_PHP" --push .
+
+# Compiler et pousser l'image WebSocket (AMD64 + ARM64)
+docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_WS" --push .
 ```
 
 ### 4. Déployer sur un serveur distant

@@ -31,24 +31,26 @@ echo " - WebSockets : $DOCKER_IMAGE_WS"
 echo "========================================================================="
 echo ""
 
-# Build using docker compose
-docker compose build php websocket
+# Set up Docker Buildx builder for multi-platform (AMD64 + ARM64)
+echo "Configuration du builder multi-plateforme (Docker Buildx)..."
+docker buildx create --use --name quizzapp-builder 2>/dev/null || docker buildx use quizzapp-builder || true
 
 echo ""
-echo "========================================================================="
-echo " Build complété. Connexion au registre d'images (si nécessaire)..."
-echo "========================================================================="
-echo ""
-
-# Ask user to make sure they are logged in if they push to a remote registry
 echo "Pour envoyer les images sur Docker Hub ou votre registre privé,"
 echo "assurez-vous d'avoir exécuté : docker login"
 echo ""
 
-# Push using docker compose
-docker compose push php websocket
+echo "Lancement du build multi-plateforme (linux/amd64, linux/arm64) et push automatique..."
+
+# Build and push PHP image
+echo "-> Build & Push PHP-FPM image..."
+docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_PHP" --push .
+
+# Build and push WebSocket image
+echo "-> Build & Push WebSocket image..."
+docker buildx build --platform linux/amd64,linux/arm64 -t "$DOCKER_IMAGE_WS" --push .
 
 echo ""
 echo "========================================================================="
-echo " SUCCÈS : Les images ont été poussées sur le registre !"
+echo " SUCCÈS : Les images multi-plateformes (AMD64 + ARM64) ont été publiées !"
 echo "========================================================================="
