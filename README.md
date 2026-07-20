@@ -251,8 +251,26 @@ server {
 }
 ```
 
+---
+
+## Configuration avec Pangolin (Tunnel & Reverse Proxy)
+
+**Pangolin** est une alternative moderne auto-hébergée à Cloudflare Tunnel basée sur WireGuard, qui gère automatiquement les certificats SSL Let's Encrypt.
+
+Pour router Quizzapp via Pangolin :
+
+1. Démarrez Quizzapp en local ou sur votre hôte Docker en exposant l'application sur le port local de votre choix (ex: `APP_PORT=7777`).
+2. Dans l'interface d'administration de **Pangolin** :
+   *   Ajoutez un nouveau **Service** (ou Route) associé à votre domaine public (ex: `quiz.votre-domaine.com`).
+   *   Définissez la destination cible (Target URL) vers l'IP locale ou le conteneur sur le port `7777` : `http://127.0.0.1:7777`.
+   *   **Important** : Activez l'option de support des **WebSockets** (ou *HTTP Upgrade*) dans les paramètres de la route de Pangolin (obligatoire pour le serveur de duels Ratchet).
+   *   Laissez Pangolin générer et renouveler automatiquement votre certificat SSL.
+3. Configurez vos variables d'environnement Quizzapp (`.env` ou variables de Stack) :
+   *   `WS_HOST` : `quiz.votre-domaine.com` (votre nom de domaine public).
+   *   `WS_PORT` : Laissez cette variable **vide** (l'application utilisera le port standard sécurisé `443` et se connectera automatiquement en `wss://`).
+
 ### 4. Déployer et démarrer
-Cliquez sur **Deploy Stack** (Déployer). Dockhand va cloner le dépôt, récupérer les images Docker et instancier tous les conteneurs. Les scripts de migration de base de données se lanceront d'eux-mêmes au premier démarrage.
+Cliquez sur **Deploy Stack** (Déployer) sur Dockhand (ou exécutez `docker compose -f docker-compose.prod.yml up -d`). Dockhand va cloner le dépôt, récupérer les images Docker et instancier tous les conteneurs. Les scripts de migration de base de données se lanceront d'eux-mêmes au premier démarrage.
 
 ---
 
