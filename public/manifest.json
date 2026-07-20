@@ -1,0 +1,34 @@
+{
+  "name": "Quizzapp Premium",
+  "short_name": "Quizzapp",
+  "description": "Plateforme moderne de quiz en temps réel et duels privés",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/bottts/svg?seed=Quizzapp&size=192",
+      "type": "image/svg+xml",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/bottts/svg?seed=Quizzapp&size=512",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Duels en direct",
+      "url": "/duel",
+      "description": "Défier vos amis en temps réel"
+    },
+    {
+      "name": "Parcourir les quiz",
+      "url": "/",
+      "description": "Jouer aux quiz thématiques"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# Sensitive environment configuration — NEVER commit this
+.env
+
+# Composer dependencies — install via composer install
+/vendor/
+
+# Application logs
+/logs/*.log
+/logs/mail.log
+
+# Docker build artifacts
+*.tar
+
+# IDE/Editor folders
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS artifacts
+.DS_Store
+
+# Capture screenshots (test files)
+*.png
+*.jpg
+*.jpeg
+!public/assets/images/
+
+# PHP cache
+*.cache

@@ -1,0 +1,22 @@
+{
+    "name": "quizzapp/quizzapp",
+    "description": "Modern responsive Quiz Web Application in PHP 8.3 with Real-time Duels",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "require": {
+        "php": ">=8.3",
+        "cboden/ratchet": "^0.4.4",
+        "firebase/php-jwt": "^6.10",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

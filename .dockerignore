@@ -1,0 +1,42 @@
+# --- VCS & IDE ---
+.git
+.gitignore
+.github
+.idea
+.vscode
+
+# --- Local dev overrides ---
+.env
+*.local
+.env.local
+
+# --- Tests & Dev dependencies ---
+tests/
+*.test.php
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Documentation & Metadata ---
+README.md
+LICENSE
+*.md
+*.png
+*.jpg
+*.jpeg
+
+# --- Docker meta ---
+docker/
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+.dockerignore
+bin/docker-build-push.sh
+
+# --- Database seed & migration (embedded at runtime) ---
+# Keep these — needed inside container
+# database/
+
+# --- Composer cache ---
+.composer/
