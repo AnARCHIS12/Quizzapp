@@ -64,47 +64,13 @@ services:
       db:
         condition: service_healthy
 
-  # 4. Nginx — exposé sur APP_PORT pour reverse proxy hôte (Pangolin, Nginx, Traefik...)
+  # 4. Nginx — config intégrée dans l'image (reverse proxy hôte : Pangolin, Traefik...)
   web:
-    image: nginx:alpine
+    image: ${DOCKER_IMAGE_NGINX:-liberchat/quizzapp-nginx:latest}
     container_name: quizzapp_web
     restart: always
     ports:
       - "${APP_PORT:-7777}:80"
-    command: >
-      sh -c "cat > /etc/nginx/conf.d/default.conf << 'NGINXEOF'
-      server {
-        listen 80;
-        server_name localhost;
-        root /var/www/public;
-        index index.php;
-        charset utf-8;
-        server_tokens off;
-        client_max_body_size 2M;
-        add_header X-Frame-Options \"DENY\" always;
-        add_header X-Content-Type-Options \"nosniff\" always;
-        add_header X-XSS-Protection \"1; mode=block\" always;
-        add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
-        location ~ /(composer\\.json|composer\\.lock|\\.env) { deny all; }
-        location /assets/uploads/ { location ~ \\.php$$ { deny all; } }
-        location / { try_files $$uri $$uri/ /index.php?$$query_string; }
-        location ~ \\.php$$ {
-          fastcgi_pass php:9000;
-          fastcgi_param SCRIPT_FILENAME $$document_root$$fastcgi_script_name;
-          include fastcgi_params;
-        }
-        location /ws {
-          proxy_pass http://websocket:8080;
-          proxy_http_version 1.1;
-          proxy_set_header Upgrade $$http_upgrade;
-          proxy_set_header Connection \"Upgrade\";
-          proxy_set_header Host $$host;
-          proxy_read_timeout 86400s;
-        }
-        location ~ /\\.(?!well-known).* { deny all; }
-      }
-      NGINXEOF
-      nginx -g 'daemon off;'"
     depends_on:
       - php
       - websocket
