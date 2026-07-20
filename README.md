@@ -193,6 +193,7 @@ Dans la section **Environment Variables** (ou le formulaire `.env` intégré de 
 *   `WS_PORT` : `8080`
 *   `JWT_SECRET` : `mettez_une_cle_secrete_aleatoire_tres_longue_ici`
 *   `MISTRAL_API_KEY` : `votre_cle_mistral_api` (facultatif)
+*   `APP_PORT` : `7777` (Port local exposé sur l'hôte, très utile si les ports 80 et 443 sont déjà pris par un autre serveur web / proxy global sur votre machine !)
 
 *Pour la configuration SMTP (Emails) :*
 *   `SMTP_HOST` : `smtp.votre-fournisseur.com` (laisser vide pour simuler localement dans `logs/mail.log`)
@@ -202,6 +203,53 @@ Dans la section **Environment Variables** (ou le formulaire `.env` intégré de 
 *   `SMTP_SECURE` : `tls`
 *   `MAIL_FROM_ADDRESS` : `no-reply@votre-domaine.com`
 *   `MAIL_FROM_NAME` : `Quizzapp`
+
+---
+
+## Utilisation avec un Reverse Proxy Hôte (Nginx global, Apache, Traefik...)
+
+Si votre serveur exécute déjà d'autres sites internet et que les ports **80** et **443** sont déjà monopolisés par un serveur web global sur la machine hôte :
+
+1. Définissez `APP_PORT=7777` dans vos variables de Stack (ou fichier `.env`). Le conteneur Nginx de Quizzapp écoutera localement sur le port `7777`.
+2. Configurez le serveur web global de votre machine hôte pour faire office de proxy inverse. 
+
+### Exemple de configuration virtuelle Nginx hôte (avec SSL Let's Encrypt) :
+```nginx
+server {
+    listen 80;
+    server_name quiz.mondomaine.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name quiz.mondomaine.com;
+
+    ssl_certificate /etc/letsencrypt/live/quiz.mondomaine.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/quiz.mondomaine.com/privkey.pem;
+
+    # Proxy principal HTTP
+    location / {
+        proxy_pass http://127.0.0.1:7777;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Proxy pour les WebSockets en temps réel (Duels)
+    location /ws {
+        proxy_pass http://127.0.0.1:7777/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
 
 ### 4. Déployer et démarrer
 Cliquez sur **Deploy Stack** (Déployer). Dockhand va cloner le dépôt, récupérer les images Docker et instancier tous les conteneurs. Les scripts de migration de base de données se lanceront d'eux-mêmes au premier démarrage.
