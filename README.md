@@ -162,6 +162,48 @@ docker compose up -d
 
 ---
 
+## Déploiement en Production avec Dockhand
+
+**Dockhand** est une solution d'orchestration légère et moderne alternative à Portainer. Pour installer Quizzapp via l'interface de Dockhand :
+
+### 1. Créer un nouveau "Stack"
+Dans le tableau de bord de votre instance Dockhand :
+1. Allez dans l'onglet **Stacks**.
+2. Cliquez sur **Create Stack** (Créer une pile).
+
+### 2. Configurer la source Git (GitOps)
+1. Choisissez **Git Repository** comme source de déploiement.
+2. Entrez l'URL publique de votre dépôt : `https://github.com/AnARCHIS12/Quizzapp.git`
+3. Spécifiez la branche : `main`
+4. Laissez le chemin du fichier de configuration Compose par défaut (`docker-compose.yml`).
+
+### 3. Configurer les variables d'environnement dans l'UI de Dockhand
+Dans la section **Environment Variables** (ou le formulaire `.env` intégré de Dockhand), ajoutez les paires de clés/valeurs requises :
+*   `DOCKER_IMAGE_PHP` : `liberchat/quizzapp-php:latest` (image d'application pré-construite)
+*   `DOCKER_IMAGE_WS` : `liberchat/quizzapp-websocket:latest` (image WebSocket pré-construite)
+*   `DB_HOST` : `db` (doit correspondre au nom de service de la base de données dans le compose)
+*   `DB_PORT` : `3306`
+*   `DB_NAME` : `quizzapp`
+*   `DB_USER` : `quizzapp_user`
+*   `DB_PASS` : `mettez_un_mot_de_passe_base_de_donnees_robuste`
+*   `WS_PORT` : `8080`
+*   `JWT_SECRET` : `mettez_une_cle_secrete_aleatoire_tres_longue_ici`
+*   `MISTRAL_API_KEY` : `votre_cle_mistral_api` (facultatif)
+
+*Pour la configuration SMTP (Emails) :*
+*   `SMTP_HOST` : `smtp.votre-fournisseur.com` (laisser vide pour simuler localement dans `logs/mail.log`)
+*   `SMTP_PORT` : `587`
+*   `SMTP_USER` : `votre_compte_mail@domaine.com`
+*   `SMTP_PASS` : `mot_de_passe_smtp`
+*   `SMTP_SECURE` : `tls`
+*   `MAIL_FROM_ADDRESS` : `no-reply@votre-domaine.com`
+*   `MAIL_FROM_NAME` : `Quizzapp`
+
+### 4. Déployer et démarrer
+Cliquez sur **Deploy Stack** (Déployer). Dockhand va cloner le dépôt, récupérer les images Docker et instancier tous les conteneurs. Les scripts de migration de base de données se lanceront d'eux-mêmes au premier démarrage.
+
+---
+
 ## Commandes Utiles
 
 *   **Arrêter le projet** :
