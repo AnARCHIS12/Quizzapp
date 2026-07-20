@@ -20,11 +20,8 @@
 # macOS artifacts
 .DS_Store
 
-# Capture screenshots (test files)
-*.png
-*.jpg
-*.jpeg
-!public/assets/images/
+# User-uploaded assets (binary, not for VCS)
+/public/assets/uploads/
 
 # PHP cache
 *.cache
