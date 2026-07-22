@@ -567,27 +567,21 @@ class WebSocketServer implements MessageComponentInterface
     /**
      * Launch async background PHP process to generate AI questions for SPECIFIC chosen categories only.
      * Tagged with roomCode so the game loads 100% freshly generated questions for this duel.
+     * CRITICAL: Must be fully non-blocking — never call proc_close() as it blocks the ReactPHP event loop.
      */
     private function triggerAsyncAIGenerationForCategories(string $roomCode, array $catIds): void
     {
-        if (!function_exists('proc_open')) return;
         if (empty($catIds)) return;
 
         $scriptPath = dirname(__DIR__, 2) . '/bin/generate_questions_async.php';
         if (!file_exists($scriptPath)) return;
 
         $args = implode(' ', array_map('intval', $catIds));
-        $cmd  = "php {$scriptPath} " . escapeshellarg($roomCode) . " {$args}";
+        $safeRoom = escapeshellarg($roomCode);
 
-        $descriptors = [
-            0 => ['file', '/dev/null', 'r'],
-            1 => ['file', '/dev/null', 'w'],
-            2 => ['file', '/dev/null', 'w'],
-        ];
-        $proc = \proc_open($cmd, $descriptors, $pipes);
-        if (is_resource($proc)) {
-            \proc_close($proc);
-        }
+        // Fully detached via nohup + & — zero blocking of the event loop
+        $cmd = "nohup php {$scriptPath} {$safeRoom} {$args} > /dev/null 2>&1 &";
+        \shell_exec($cmd);
     }
 
     /**
@@ -647,19 +641,10 @@ class WebSocketServer implements MessageComponentInterface
         if (!file_exists($scriptPath)) return;
 
         $args = implode(' ', array_map('intval', $catIds));
-        $cmd  = "php {$scriptPath} {$args}";
 
-        // Launch fully detached background process (non-blocking)
-        $descriptors = [
-            0 => ['file', '/dev/null', 'r'],
-            1 => ['file', '/dev/null', 'w'],
-            2 => ['file', '/dev/null', 'w'],
-        ];
-        $proc = \proc_open($cmd, $descriptors, $pipes);
-        if (is_resource($proc)) {
-            // Immediately release; the child runs independently
-            \proc_close($proc);
-        }
+        // Fully detached via nohup + & — zero blocking of the event loop
+        $cmd = "nohup php {$scriptPath} {$args} > /dev/null 2>&1 &";
+        \shell_exec($cmd);
     }
 
     private function loadQuestionsFromCategoryPicks(array $pickedByPlayer, array $playerUserIds = []): array
