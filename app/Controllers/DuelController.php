@@ -66,14 +66,15 @@ class DuelController
 
         // Web socket URL configuration
         // Check if explicit URL is defined in ENV, else auto-resolve from the current request.
-        $wsUrl = $_ENV['WS_URL'] ?? null;
-        if (!$wsUrl) {
+        $wsUrl = trim((string) ($_ENV['WS_URL'] ?? ''));
+        if ($wsUrl === '') {
             $requestHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
             $configuredHost = trim((string) ($_ENV['WS_HOST'] ?? ''));
             $host = $configuredHost !== '' ? $configuredHost : $requestHost;
             $forwardedProto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null;
+            $configuredScheme = trim((string) ($_ENV['WS_SCHEME'] ?? ''));
             $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $forwardedProto === 'https';
-            $scheme = $isSecure ? 'wss' : 'ws';
+            $scheme = $configuredScheme !== '' ? $configuredScheme : ($isSecure ? 'wss' : 'ws');
             $wsPort = trim((string) ($_ENV['WS_PORT'] ?? ''));
             $targetHost = $wsPort !== '' ? (parse_url('http://' . $host, PHP_URL_HOST) ?: $host) . ":{$wsPort}" : $host;
             $wsUrl = "{$scheme}://{$targetHost}/ws";
