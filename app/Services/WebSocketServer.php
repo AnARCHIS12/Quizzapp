@@ -461,35 +461,88 @@ class WebSocketServer implements MessageComponentInterface
         $selectionDone  = ($nextPickIndex >= $totalPicks);
 
         if ($selectionDone) {
-            // Load questions: 3 per picked category (excluding previously played questions for room players)
             $playerUserIds = array_map(fn($p) => (int)$p['user_id'], array_values($room['players']));
-            $questions = $this->loadQuestionsFromCategoryPicks($room['picked_categories'], $playerUserIds);
+            $apiKey = getenv('MISTRAL_API_KEY') ?: '';
+            $hasAI  = !empty($apiKey) && function_exists('proc_open');
 
-            if (empty($questions)) {
-                throw new \Exception('Pas assez de questions pour les catégories choisies.');
-            }
-
-            // Shuffle for variety
-            shuffle($questions);
-            $room['questions'] = $questions;
-            $room['status']    = 'playing';
-            $room['selecting'] = false;
-
-            Database::query("UPDATE matches SET status = 'playing' WHERE room_code = ?", [$code]);
-
-            $this->broadcast($code, [
-                'type'   => 'selection_complete',
-                'picked' => $allPicked,
-                'total_questions' => count($questions)
-            ]);
-
-            // Small delay then first question
-            $loop = \React\EventLoop\Loop::get();
-            $loop->addTimer(2.0, function() use ($code) {
-                if (isset($this->rooms[$code])) {
-                    $this->sendQuestion($code, 0);
+            if ($hasAI) {
+                // Collect all chosen category IDs
+                $chosenCatIds = [];
+                foreach ($room['picked_categories'] as $uid => $catIds) {
+                    foreach ($catIds as $cId) {
+                        $chosenCatIds[] = (int)$cId;
+                    }
                 }
-            });
+                $chosenCatIds = array_unique($chosenCatIds);
+
+                // Launch targeted AI generation ONLY for chosen categories
+                $this->triggerAsyncAIGenerationForCategories($chosenCatIds);
+
+                // Show loading screen to players during AI generation (12 seconds)
+                $this->broadcast($code, [
+                    'type'    => 'generating_questions',
+                    'message' => '🤖 L\'IA génère vos questions personnalisées...',
+                    'seconds' => 12,
+                    'picked'  => $allPicked
+                ]);
+
+                Database::query("UPDATE matches SET status = 'playing' WHERE room_code = ?", [$code]);
+                $room['status']    = 'playing';
+                $room['selecting'] = false;
+                $room['picked_categories_snapshot'] = $room['picked_categories'];
+                $room['player_user_ids_snapshot']   = $playerUserIds;
+
+                // After 12s, load fresh questions (AI should be done by then) and start
+                $loop = \React\EventLoop\Loop::get();
+                $loop->addTimer(12.0, function() use ($code, $allPicked) {
+                    if (!isset($this->rooms[$code])) return;
+                    $pickedCats  = $this->rooms[$code]['picked_categories_snapshot'] ?? $this->rooms[$code]['picked_categories'];
+                    $playerUids  = $this->rooms[$code]['player_user_ids_snapshot']   ?? [];
+                    $questions   = $this->loadQuestionsFromCategoryPicks($pickedCats, $playerUids);
+                    if (empty($questions)) return;
+                    shuffle($questions);
+                    $this->rooms[$code]['questions'] = $questions;
+
+                    $this->broadcast($code, [
+                        'type'            => 'selection_complete',
+                        'picked'          => $allPicked,
+                        'total_questions' => count($questions)
+                    ]);
+
+                    $loop2 = \React\EventLoop\Loop::get();
+                    $loop2->addTimer(2.0, function() use ($code) {
+                        if (isset($this->rooms[$code])) {
+                            $this->sendQuestion($code, 0);
+                        }
+                    });
+                });
+
+            } else {
+                // No AI key: load questions immediately from DB
+                $questions = $this->loadQuestionsFromCategoryPicks($room['picked_categories'], $playerUserIds);
+                if (empty($questions)) {
+                    throw new \Exception('Pas assez de questions pour les catégories choisies.');
+                }
+                shuffle($questions);
+                $room['questions'] = $questions;
+                $room['status']    = 'playing';
+                $room['selecting'] = false;
+
+                Database::query("UPDATE matches SET status = 'playing' WHERE room_code = ?", [$code]);
+
+                $this->broadcast($code, [
+                    'type'            => 'selection_complete',
+                    'picked'          => $allPicked,
+                    'total_questions' => count($questions)
+                ]);
+
+                $loop = \React\EventLoop\Loop::get();
+                $loop->addTimer(2.0, function() use ($code) {
+                    if (isset($this->rooms[$code])) {
+                        $this->sendQuestion($code, 0);
+                    }
+                });
+            }
         } else {
             $this->broadcast($code, [
                 'type'           => 'category_picked',
@@ -500,6 +553,32 @@ class WebSocketServer implements MessageComponentInterface
                 'total_picks'    => $totalPicks,
                 'all_picked'     => $allPicked
             ]);
+        }
+    }
+
+    /**
+     * Launch async background PHP process to generate AI questions for SPECIFIC chosen categories only.
+     * Called right after category selection so questions exactly match the chosen themes.
+     */
+    private function triggerAsyncAIGenerationForCategories(array $catIds): void
+    {
+        if (!function_exists('proc_open')) return;
+        if (empty($catIds)) return;
+
+        $scriptPath = dirname(__DIR__, 2) . '/bin/generate_questions_async.php';
+        if (!file_exists($scriptPath)) return;
+
+        $args = implode(' ', array_map('intval', $catIds));
+        $cmd  = "php {$scriptPath} {$args}";
+
+        $descriptors = [
+            0 => ['file', '/dev/null', 'r'],
+            1 => ['file', '/dev/null', 'w'],
+            2 => ['file', '/dev/null', 'w'],
+        ];
+        $proc = \proc_open($cmd, $descriptors, $pipes);
+        if (is_resource($proc)) {
+            \proc_close($proc);
         }
     }
 

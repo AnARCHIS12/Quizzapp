@@ -142,7 +142,27 @@
         </div>
     </div>
 
-    <!-- 4. COUNTDOWN -->
+    <!-- 4. GENERATING QUESTIONS (AI loading screen) -->
+    <div x-show="roomState === 'generating'" x-cloak class="glass-card rounded-2xl sm:rounded-3xl p-10 sm:p-14 text-center shadow-xl space-y-6">
+        <div class="flex justify-center">
+            <div class="relative w-20 h-20">
+                <div class="absolute inset-0 rounded-full border-4 border-violet-500/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-t-violet-500 animate-spin"></div>
+                <span class="absolute inset-0 flex items-center justify-center text-3xl">🤖</span>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight text-violet-400">G&eacute;n&eacute;ration des questions IA</h2>
+            <p class="text-slate-400 text-sm mt-1">Des questions in&eacute;dites sont cr&eacute;&eacute;es pour vos th&egrave;mes choisis...</p>
+        </div>
+        <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+            <div class="h-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-1000"
+                 :style="'width:' + aiGenerationProgress + '%'"></div>
+        </div>
+        <p class="text-xs text-slate-500" x-text="'Prêt dans ~' + aiSecondsLeft + ' secondes...'"></p>
+    </div>
+
+    <!-- 5. COUNTDOWN -->
     <div x-show="roomState === 'countdown'" x-cloak class="glass-card rounded-2xl sm:rounded-3xl p-10 sm:p-12 text-center shadow-xl space-y-4">
         <span class="text-6xl sm:text-7xl font-extrabold text-violet-500 animate-ping block" x-text="countdownVal"></span>
         <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight">Le combat commence !</h2>
@@ -344,6 +364,10 @@ function duelArena() {
         totalPicks: 0,
         picksPerPlayer: 3,
 
+        aiSecondsLeft: 12,
+        aiGenerationProgress: 0,
+        aiProgressInterval: null,
+
         get currentPickerIsMe() { return this.currentPicker === this.myId; },
         get currentPickerName() {
             const p = this.players.find(p => p.user_id === this.currentPicker);
@@ -428,7 +452,21 @@ function duelArena() {
                     this.allPicked     = data.all_picked;
                     break;
 
+                case 'generating_questions':
+                    this.roomState = 'generating';
+                    this.aiSecondsLeft = data.seconds || 12;
+                    this.aiGenerationProgress = 0;
+                    clearInterval(this.aiProgressInterval);
+                    this.aiProgressInterval = setInterval(() => {
+                        this.aiSecondsLeft = Math.max(0, this.aiSecondsLeft - 1);
+                        this.aiGenerationProgress = Math.min(95, ((data.seconds - this.aiSecondsLeft) / data.seconds) * 100);
+                        if (this.aiSecondsLeft <= 0) clearInterval(this.aiProgressInterval);
+                    }, 1000);
+                    break;
+
                 case 'selection_complete':
+                    clearInterval(this.aiProgressInterval);
+                    this.aiGenerationProgress = 100;
                     this.allPicked      = data.picked;
                     this.picksDone      = data.picked.length;
                     this.totalQuestions = data.total_questions;
