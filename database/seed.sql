@@ -1,6 +1,8 @@
 -- Seed SQL Data - Quizzapp
 -- Injects default roles, achievements, initial categories, and highly neutral quiz contents.
 
+SET NAMES utf8mb4;
+
 -- 1. Insert Roles
 INSERT INTO `roles` (`id`, `name`, `description`) VALUES
 (1, 'admin', 'Administrator with full access to management features'),
