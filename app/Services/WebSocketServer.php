@@ -705,7 +705,11 @@ class WebSocketServer implements MessageComponentInterface
                 // Wait 5 seconds to let players review explanation, then send next
                 $this->scheduleNextQuestion($code, $nextIndex);
             } else {
-                $this->finishGame($code);
+                // Wait 5 seconds to let players review explanation of the last question, then show podium
+                $loop = \React\EventLoop\Loop::get();
+                $loop->addTimer(5.0, function() use ($code) {
+                    $this->finishGame($code);
+                });
             }
         }
     }
