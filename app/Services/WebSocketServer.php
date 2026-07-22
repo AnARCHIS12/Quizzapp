@@ -507,14 +507,15 @@ class WebSocketServer implements MessageComponentInterface
             foreach ($catIds as $catId) {
                 $key = (int)$catId;
                 
-                // Fetch questions from DB for this category
+                // Fetch questions matching this category, its children, or its parent
                 $rows = Database::fetchAll(
-                    "SELECT q.* FROM questions q
+                    "SELECT DISTINCT q.* FROM questions q
                      JOIN quizzes quiz ON q.quiz_id = quiz.id
-                     WHERE quiz.category_id = ?
+                     JOIN categories c ON quiz.category_id = c.id
+                     WHERE c.id = ? OR c.parent_id = ? OR c.id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
                      ORDER BY RAND()
                      LIMIT 3",
-                    [$key]
+                    [$key, $key, $key]
                 );
 
                 foreach ($rows as $q) {
