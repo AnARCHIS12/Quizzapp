@@ -53,19 +53,27 @@ class Database
         return self::$pdo;
     }
 
+    private static bool $seedChecked = false;
+
     /**
      * Automatically ensure database tables and clean UTF-8 seed data exist
      */
     private static function ensureDatabaseSeeded(PDO $pdo): void
     {
+        if (self::$seedChecked) {
+            return;
+        }
+        self::$seedChecked = true;
+
         try {
-            $stmtCat = $pdo->query("SELECT name FROM categories WHERE id = 1");
-            $rowCat = $stmtCat ? $stmtCat->fetch() : false;
+            $stmtCat = $pdo->query("SELECT COUNT(*) FROM categories");
+            $catCount = $stmtCat ? (int)$stmtCat->fetchColumn() : 0;
+
             $stmtUser = $pdo->query("SELECT password_hash FROM users WHERE id = 1");
             $rowUser = $stmtUser ? $stmtUser->fetch() : false;
             $validAdmin = $rowUser && password_verify('admin123', (string)($rowUser['password_hash'] ?? ''));
 
-            $needsSeeding = !$rowCat || !$validAdmin || (isset($rowCat['name']) && str_contains((string)$rowCat['name'], 'Ã'));
+            $needsSeeding = ($catCount < 21) || !$validAdmin;
 
             if ($needsSeeding) {
                 $baseDir = dirname(__DIR__, 2);
@@ -77,30 +85,20 @@ class Database
                     $migrationSql = file_get_contents($migrationFile);
                     $seedSql = file_get_contents($seedFile);
 
-                    // Execute migration & seed
                     $pdo->exec($migrationSql);
                     $pdo->exec($seedSql);
+
+                    // Ensure status ENUM includes 'selecting'
+                    try {
+                        $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
+                    } catch (Exception $e) {}
+
+                    // Deduplicate answers and enforce unique index
+                    try {
+                        $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
+                        $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
+                    } catch (Exception $e) {}
                 }
-            }
-
-            // Ensure matches table status ENUM includes 'selecting' phase
-            $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
-
-            // Clean up any duplicate answer rows from previous re-seeding and enforce uniqueness
-            try {
-                $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
-                $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
-            } catch (Exception $e) {
-                // Index already exists or duplicate cleanup executed
-            }
-
-            // Ensure new categories (Musique, Sport, Pop Culture, Gastronomie, Series TV, Ecologie) and seed data are populated
-            $baseDir = dirname(__DIR__, 2);
-            $seedFile = $baseDir . '/database/seed.sql';
-            if (file_exists($seedFile)) {
-                $pdo->exec("SET NAMES utf8mb4");
-                $seedSql = file_get_contents($seedFile);
-                $pdo->exec($seedSql);
             }
         } catch (Exception $e) {
             error_log("Auto database seeding attempt: " . $e->getMessage());
