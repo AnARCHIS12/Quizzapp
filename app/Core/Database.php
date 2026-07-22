@@ -82,6 +82,9 @@ class Database
                     $pdo->exec($seedSql);
                 }
             }
+
+            // Ensure matches table status ENUM includes 'selecting' phase
+            $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
         } catch (Exception $e) {
             error_log("Auto database seeding attempt: " . $e->getMessage());
         }

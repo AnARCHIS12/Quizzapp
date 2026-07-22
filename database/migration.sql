@@ -109,7 +109,7 @@ CREATE TABLE `matches` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `room_code` VARCHAR(10) NOT NULL UNIQUE,
     `quiz_id` INT DEFAULT NULL,
-    `status` ENUM('waiting', 'playing', 'finished') DEFAULT 'waiting',
+    `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting',
     `current_question_index` INT DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
