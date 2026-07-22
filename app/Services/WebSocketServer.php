@@ -222,10 +222,10 @@ class WebSocketServer implements MessageComponentInterface
         $code = strtoupper($data['room_code'] ?? '');
 
         if (!isset($this->rooms[$code])) {
-            // Try to load room details if matches database has it as waiting
-            $match = Database::fetch("SELECT * FROM matches WHERE room_code = ? AND status = 'waiting'", [$code]);
+            // Try to load room details if matches database has it as waiting or active
+            $match = Database::fetch("SELECT * FROM matches WHERE room_code = ? AND status IN ('waiting', 'selecting', 'playing')", [$code]);
             if (!$match) {
-                throw new Exception("Salle introuvable ou partie déjà commencée.");
+                throw new Exception("Salle introuvable ou partie terminée.");
             }
 
             // Restore from database
@@ -241,32 +241,61 @@ class WebSocketServer implements MessageComponentInterface
 
             $this->rooms[$code] = [
                 'quiz_id' => $quizId,
-                'status' => 'waiting',
+                'status' => $match['status'] ?? 'waiting',
                 'questions' => $questions,
-                'current_index' => 0,
+                'current_index' => (int)($match['current_question_index'] ?? 0),
+                'selecting' => ($match['status'] === 'selecting'),
+                'picks_per_player' => 3,
+                'picked_categories' => [],
+                'pick_order' => [],
+                'pick_index' => 0,
                 'players' => []
             ];
         }
 
-        if ($this->rooms[$code]['status'] !== 'waiting') {
-            throw new Exception("La partie a déjà débuté.");
+        // Check if user is an existing player reconnecting
+        $existingResourceId = null;
+        foreach ($this->rooms[$code]['players'] as $resId => $pData) {
+            if ((int)$pData['user_id'] === $userId) {
+                $existingResourceId = $resId;
+                break;
+            }
         }
 
-        // Add player to room state
-        $this->rooms[$code]['players'][$conn->resourceId] = [
-            'user_id' => $userId,
-            'username' => $username,
-            'score' => 0,
-            'is_ready' => false,
-            'answers' => [],
-            'connection' => $conn
-        ];
+        if ($existingResourceId !== null) {
+            // Reconnect existing player with new connection resource ID
+            $playerData = $this->rooms[$code]['players'][$existingResourceId];
+            unset($this->rooms[$code]['players'][$existingResourceId]);
+            $playerData['connection'] = $conn;
+            $this->rooms[$code]['players'][$conn->resourceId] = $playerData;
+        } else {
+            // New player joining
+            if ($this->rooms[$code]['status'] !== 'waiting') {
+                throw new Exception("La partie a déjà débuté.");
+            }
 
-        // Register in DB if not already present
-        $match = Database::fetch("SELECT id FROM matches WHERE room_code = ?", [$code]);
-        if ($match) {
-            Database::query("INSERT IGNORE INTO match_players (match_id, user_id, is_ready) VALUES (?, ?, 0)", [$match['id'], $userId]);
+            $this->rooms[$code]['players'][$conn->resourceId] = [
+                'user_id' => $userId,
+                'username' => $username,
+                'score' => 0,
+                'is_ready' => false,
+                'answers' => [],
+                'connection' => $conn
+            ];
+
+            // Register in DB if not already present
+            $match = Database::fetch("SELECT id FROM matches WHERE room_code = ?", [$code]);
+            if ($match) {
+                Database::query("INSERT IGNORE INTO match_players (match_id, user_id, is_ready) VALUES (?, ?, 0)", [$match['id'], $userId]);
+            }
         }
+
+        // Send room_joined event
+        $conn->send(json_encode([
+            'type' => 'room_joined',
+            'room_code' => $code,
+            'players' => $this->getPlayersList($code)
+        ]));
 
         // Notify room members
         $this->broadcast($code, [
@@ -274,11 +303,25 @@ class WebSocketServer implements MessageComponentInterface
             'players' => $this->getPlayersList($code)
         ]);
 
-        $conn->send(json_encode([
-            'type' => 'room_joined',
-            'room_code' => $code,
-            'players' => $this->getPlayersList($code)
-        ]));
+        // Catch-up for rejoining players if game is in progress
+        if ($this->rooms[$code]['status'] === 'selecting') {
+            $categories = Database::fetchAll(
+                "SELECT id, name, description FROM categories WHERE is_active = 1 ORDER BY name ASC"
+            );
+            $conn->send(json_encode([
+                'type' => 'category_selection_start',
+                'pick_order' => $this->rooms[$code]['pick_order'],
+                'current_picker' => $this->rooms[$code]['pick_order'][$this->rooms[$code]['pick_index']] ?? null,
+                'picks_per_player' => $this->rooms[$code]['picks_per_player'],
+                'categories' => $categories,
+                'picked' => []
+            ]));
+        } elseif ($this->rooms[$code]['status'] === 'playing') {
+            $currIdx = $this->rooms[$code]['current_index'];
+            if (isset($this->rooms[$code]['questions'][$currIdx])) {
+                $this->sendQuestion($code, $currIdx);
+            }
+        }
     }
 
     /**
@@ -471,13 +514,14 @@ class WebSocketServer implements MessageComponentInterface
                     }
                 } else {
                     // Fallback to database questions
+                    $limitInt = (int)$questionsPerCategory;
                     $rows = Database::fetchAll(
                         "SELECT q.* FROM questions q
                          JOIN quizzes quiz ON q.quiz_id = quiz.id
                          WHERE quiz.category_id = ?
                          ORDER BY RAND()
-                         LIMIT ?",
-                        [$key, $questionsPerCategory]
+                         LIMIT {$limitInt}",
+                        [$key]
                     );
                     foreach ($rows as &$q) {
                         if (!in_array($q['id'], $seen)) {
