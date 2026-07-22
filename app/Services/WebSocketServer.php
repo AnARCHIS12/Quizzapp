@@ -236,7 +236,7 @@ class WebSocketServer implements MessageComponentInterface
                 $questions = Database::fetchAll("SELECT * FROM questions ORDER BY RAND() LIMIT 10");
             }
             foreach ($questions as &$q) {
-                $q['answers'] = Database::fetchAll("SELECT id, answer_text, match_order, association_pair FROM answers WHERE question_id = ?", [$q['id']]);
+                $q['answers'] = Database::fetchAll("SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?", [$q['id']]);
             }
 
             $this->rooms[$code] = [
@@ -491,48 +491,48 @@ class WebSocketServer implements MessageComponentInterface
 
     private function loadQuestionsFromCategoryPicks(array $pickedByPlayer): array
     {
-        $questionsPerCategory = 3; // 3 questions × 6 picks = 18 questions total
+        $questionsPerCategory = 3;
         $allQuestions = [];
         $seen = [];
-        $mistral = new \App\Services\MistralService();
 
         foreach ($pickedByPlayer as $uid => $catIds) {
             foreach ($catIds as $catId) {
                 $key = (int)$catId;
                 
-                // Get category name
-                $categoryName = (string)Database::fetchColumn("SELECT name FROM categories WHERE id = ?", [$key]);
-                
-                $aiQuestions = [];
-                if ($mistral->isConfigured()) {
-                    $aiQuestions = $mistral->generateQuestions($categoryName, null, $questionsPerCategory);
-                }
+                // Fetch questions from DB for this category
+                $rows = Database::fetchAll(
+                    "SELECT q.* FROM questions q
+                     JOIN quizzes quiz ON q.quiz_id = quiz.id
+                     WHERE quiz.category_id = ?
+                     ORDER BY RAND()
+                     LIMIT 3",
+                    [$key]
+                );
 
-                if (!empty($aiQuestions)) {
-                    foreach ($aiQuestions as $q) {
+                foreach ($rows as $q) {
+                    if (!in_array($q['id'], $seen, true)) {
+                        $q['answers'] = Database::fetchAll(
+                            "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
+                            [$q['id']]
+                        );
                         $allQuestions[] = $q;
+                        $seen[] = $q['id'];
                     }
-                } else {
-                    // Fallback to database questions
-                    $limitInt = (int)$questionsPerCategory;
-                    $rows = Database::fetchAll(
-                        "SELECT q.* FROM questions q
-                         JOIN quizzes quiz ON q.quiz_id = quiz.id
-                         WHERE quiz.category_id = ?
-                         ORDER BY RAND()
-                         LIMIT {$limitInt}",
-                        [$key]
+                }
+            }
+        }
+
+        // Fallback: If not enough questions from chosen categories, fill with random questions from DB
+        if (count($allQuestions) < 6) {
+            $fallbackRows = Database::fetchAll("SELECT * FROM questions ORDER BY RAND() LIMIT 18");
+            foreach ($fallbackRows as $fq) {
+                if (!in_array($fq['id'], $seen, true)) {
+                    $fq['answers'] = Database::fetchAll(
+                        "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
+                        [$fq['id']]
                     );
-                    foreach ($rows as &$q) {
-                        if (!in_array($q['id'], $seen)) {
-                            $q['answers'] = Database::fetchAll(
-                                "SELECT id, answer_text, match_order, association_pair FROM answers WHERE question_id = ?",
-                                [$q['id']]
-                            );
-                            $allQuestions[] = $q;
-                            $seen[] = $q['id'];
-                        }
-                    }
+                    $allQuestions[] = $fq;
+                    $seen[] = $fq['id'];
                 }
             }
         }
