@@ -587,13 +587,19 @@ class WebSocketServer implements MessageComponentInterface
 
     /**
      * Load freshly generated AI questions specifically created for this match room.
+     * Returns empty array gracefully if column doesn't exist yet (existing DB before migration).
      */
     private function loadFreshAIQuestionsForRoom(string $roomCode): array
     {
-        $rows = Database::fetchAll(
-            "SELECT * FROM questions WHERE match_room_code = ? ORDER BY id ASC",
-            [$roomCode]
-        );
+        try {
+            $rows = Database::fetchAll(
+                "SELECT * FROM questions WHERE match_room_code = ? ORDER BY id ASC",
+                [$roomCode]
+            );
+        } catch (\Exception $e) {
+            // Column may not exist yet on older databases — fall back to DB pool silently
+            return [];
+        }
 
         if (empty($rows)) return [];
 

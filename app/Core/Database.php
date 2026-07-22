@@ -66,6 +66,26 @@ class Database
         self::$seedChecked = true;
 
         try {
+            // Always run these schema migrations regardless of seeding state
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `user_question_history` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `user_id` INT NOT NULL,
+                    `question_id` INT NOT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY `uk_user_question` (`user_id`, `question_id`),
+                    INDEX `idx_uqh_user` (`user_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            } catch (Exception $e) {}
+
+            // Add match_room_code column if it doesn't exist
+            try {
+                $exists = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'questions' AND COLUMN_NAME = 'match_room_code'");
+                if ($exists && (int)$exists->fetchColumn() === 0) {
+                    $pdo->exec("ALTER TABLE `questions` ADD COLUMN `match_room_code` VARCHAR(10) DEFAULT NULL, ADD INDEX `idx_questions_room` (`match_room_code`)");
+                }
+            } catch (Exception $e) {}
+
             $stmtCat = $pdo->query("SELECT COUNT(*) FROM categories");
             $catCount = $stmtCat ? (int)$stmtCat->fetchColumn() : 0;
 
@@ -100,23 +120,6 @@ class Database
                     try {
                         $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
                         $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
-                    } catch (Exception $e) {}
-
-                    // Ensure user_question_history table exists for tracking played questions per user
-                    try {
-                        $pdo->exec("CREATE TABLE IF NOT EXISTS `user_question_history` (
-                            `id` INT AUTO_INCREMENT PRIMARY KEY,
-                            `user_id` INT NOT NULL,
-                            `question_id` INT NOT NULL,
-                            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            UNIQUE KEY `uk_user_question` (`user_id`, `question_id`),
-                            INDEX `idx_uqh_user` (`user_id`)
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-                    } catch (Exception $e) {}
-
-                    // Ensure match_room_code column exists on questions table for tagging freshly generated duel questions
-                    try {
-                        $pdo->exec("ALTER TABLE `questions` ADD COLUMN `match_room_code` VARCHAR(10) DEFAULT NULL, ADD INDEX `idx_questions_room` (`match_room_code`)");
                     } catch (Exception $e) {}
                 }
             }
