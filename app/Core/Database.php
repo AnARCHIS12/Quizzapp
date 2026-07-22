@@ -43,6 +43,7 @@ class Database
                     $config['password'],
                     $config['options']
                 );
+                self::ensureDatabaseSeeded(self::$pdo);
             } catch (PDOException $e) {
                 error_log("Database connection failure: " . $e->getMessage() . "\n" . $e->getTraceAsString());
                 throw new Exception("Database connection failure.");
@@ -50,6 +51,36 @@ class Database
         }
 
         return self::$pdo;
+    }
+
+    /**
+     * Automatically ensure database tables and clean UTF-8 seed data exist
+     */
+    private static function ensureDatabaseSeeded(PDO $pdo): void
+    {
+        try {
+            $stmt = $pdo->query("SELECT name FROM categories WHERE id = 1");
+            $row = $stmt ? $stmt->fetch() : false;
+            $needsSeeding = !$row || (isset($row['name']) && str_contains((string)$row['name'], 'Ã'));
+
+            if ($needsSeeding) {
+                $baseDir = dirname(__DIR__, 2);
+                $migrationFile = $baseDir . '/database/migration.sql';
+                $seedFile = $baseDir . '/database/seed.sql';
+
+                if (file_exists($migrationFile) && file_exists($seedFile)) {
+                    $pdo->exec("SET NAMES utf8mb4");
+                    $migrationSql = file_get_contents($migrationFile);
+                    $seedSql = file_get_contents($seedFile);
+
+                    // Execute migration & seed
+                    $pdo->exec($migrationSql);
+                    $pdo->exec($seedSql);
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Auto database seeding attempt: " . $e->getMessage());
+        }
     }
 
     /**
