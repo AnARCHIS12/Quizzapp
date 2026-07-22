@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quizzapp - Plateforme de Quiz Premium en temps réel</title>
     
+    <!-- PWA & Multiplatform Web App Meta Tags -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#8b5cf6">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Quizzapp">
+    <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/bottts/png?seed=Quizzapp&size=180">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://api.dicebear.com/7.x/bottts/png?seed=Quizzapp&size=32">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://api.dicebear.com/7.x/bottts/png?seed=Quizzapp&size=16">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -305,6 +316,17 @@
                 }
             }
         });
+    </script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js').catch(function(err) {
+                    console.log('ServiceWorker registration error: ', err);
+                });
+            });
+        }
     </script>
 </body>
 </html>
