@@ -33,7 +33,13 @@ INSERT INTO `categories` (`id`, `parent_id`, `name`, `slug`, `description`, `ima
 (12, 11, 'Socialisme', 'socialisme', 'Doctrine politique et économique prônant la justice sociale et la propriété collective ou publique des moyens de production.', 'socialism.jpg'),
 (13, 11, 'Anarchisme', 'anarchisme', 'Courant de philosophie politique qui rejette toute autorité, État ou hiérarchie sociale au profit d\'une liberté totale.', 'anarchism.jpg'),
 (14, 11, 'Communisme', 'communisme', 'Idéologie politique visant l\'instauration d\'une société sans classes, sans État et sans propriété privée.', 'communism.jpg'),
-(15, 11, 'Générale (Politique)', 'politique-generale', 'Culture politique générale : systèmes, institutions démocratiques, géopolitique et histoire mondiale.', 'general_politics.jpg');
+(15, 11, 'Générale (Politique)', 'politique-generale', 'Culture politique générale : systèmes, institutions démocratiques, géopolitique et histoire mondiale.', 'general_politics.jpg'),
+(16, NULL, 'Musique', 'musique', 'Compositeurs classiques, histoire du rock, du jazz, instruments et grands succès de la chanson française et internationale.', 'music.jpg'),
+(17, NULL, 'Sport', 'sport', 'Histoire des sports, épreuves olympiques, football, athlétisme, échecs, records mythiques et règles de jeu.', 'sport.jpg'),
+(18, NULL, 'Jeux Vidéo & Pop Culture', 'pop-culture', 'Rétrogaming, consoles culte (Nintendo, Sega, PlayStation), grandes sagas (Zelda, Mario, RPG) et culture geek.', 'pop_culture.jpg'),
+(19, NULL, 'Gastronomie', 'gastronomie', 'Spécialités régionales, origines des recettes célèbres, épices, pâtisserie et arts de la table.', 'gastronomy.jpg'),
+(20, NULL, 'Séries TV & Animation', 'series-tv', 'Séries cultes, animation japonaise (Anime), séries dramatiques et comédies emblématiques.', 'series_tv.jpg'),
+(21, NULL, 'Écologie & Environnement', 'ecologie', 'Biodiversité, climat, écosystèmes, énergies renouvelables et grands enjeux de la transition.', 'ecology.jpg');
 
 -- 4. Seed Default Admin and User
 -- Admin Password: admin123 (hashed with bcrypt)
@@ -335,3 +341,111 @@ INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
 (88, 'Le totalitarisme', 1), (88, 'L\'autoritarisme', 0), (88, 'La dictature militaire', 0), (88, 'L\'aristocratie', 0),
 (89, 'Le droit de vote accordé à tous les citoyens adultes sans condition', 1), (89, 'Le vote réservé aux propriétaires fonciers', 0), (89, 'Le vote indirect via des grands électeurs', 0), (89, 'Le vote limité aux diplômés universitaires', 0),
 (90, 'Faux', 1), (90, 'Vrai', 0);
+
+-- Quiz 18: Grands Classiques de la Musique (Catégorie Musique - ID 16)
+INSERT INTO `quizzes` (`id`, `category_id`, `title`, `description`, `time_limit`, `xp_reward`) VALUES
+(18, 16, 'Grands Classiques de la Musique', 'Un voyage à travers l\'histoire de la musique classique, des instruments et des succès mondiaux.', 20, 15);
+
+INSERT INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+(91, 18, 'mcq', 'Quel compositeur classique allemand a écrit la Neuvième Symphonie et l\'Ode à la joie ?', 10, 'Ludwig van Beethoven a composé sa célèbre 9e symphonie alors qu\'il était devenu totalement sourd.', 1),
+(92, 18, 'mcq', 'Quel groupe de rock britannique mythique a sorti l\'album "The Dark Side of the Moon" en 1973 ?', 10, 'Pink Floyd a marqué l\'histoire de la musique progressive avec cet album d\'une immense longévité.', 2),
+(93, 18, 'mcq', 'Combien de cordes possède une guitare classique standard ?', 10, 'La guitare classique possède 6 cordes accordées usuellement en Mi, La, Ré, Sol, Si, Mi.', 3),
+(94, 18, 'true_false', 'Wolfgang Amadeus Mozart a composé ses premières pièces musicales dès l\'âge de 5 ans.', 10, 'Mozart était un enfant prodige d\'exception ayant commencé le clavecin et la composition très tôt.', 4),
+(95, 18, 'mcq', 'Quel instrument à vent en cuivre est équipé de pistons et a été joué par Miles Davis ?', 10, 'Miles Davis est l\'un des trompettistes de jazz les plus influents de l\'histoire.', 5);
+
+INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(91, 'Ludwig van Beethoven', 1), (91, 'Johann Sebastian Bach', 0), (91, 'Franz Schubert', 0), (91, 'Johannes Brahms', 0),
+(92, 'Pink Floyd', 1), (92, 'The Beatles', 0), (92, 'Led Zeppelin', 0), (92, 'The Rolling Stones', 0),
+(93, '6', 1), (93, '4', 0), (93, '8', 0), (93, '12', 0),
+(94, 'Vrai', 1), (94, 'Faux', 0),
+(95, 'La trompette', 1), (95, 'Le trombone', 0), (95, 'Le saxhorn', 0), (95, 'Le cor d\'harmonie', 0);
+
+-- Quiz 19: Histoire du Sport & JO (Catégorie Sport - ID 17)
+INSERT INTO `quizzes` (`id`, `category_id`, `title`, `description`, `time_limit`, `xp_reward`) VALUES
+(19, 17, 'Histoire du Sport & Jeux Olympiques', 'Testez vos connaissances sur l\'histoire des sports, les épreuves olympiques et les grands athlètes.', 20, 15);
+
+INSERT INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+(96, 19, 'mcq', 'Dans quel pays antique se sont déroulés les premiers Jeux Olympiques de l\'histoire ?', 10, 'Les Jeux Olympiques antiques sont nés dans la cité grecque d\'Olympie en 776 av. J.-C.', 1),
+(97, 19, 'mcq', 'Combien de joueurs composent une équipe de football sur le terrain lors d\'un match officiel ?', 10, 'Une équipe de football se compose de 11 joueurs, dont un gardien de but.', 2),
+(98, 19, 'mcq', 'Quel athlète jamaïcain détient le record du monde du 100 mètres en 9,58 secondes ?', 10, 'Usain Bolt a établi ce record légendaire aux championnats du monde de Berlin en 2009.', 3),
+(99, 19, 'true_false', 'Au tennis, le terme "Love" désigne un score de zéro point.', 10, 'L\'origine vient probablement du mot français "l\'œuf", symbolisant le chiffre zéro.', 4),
+(100, 19, 'mcq', 'Quelle est la durée réglementaire d\'un match de basket-ball en NBA (hors prolongations) ?', 10, 'Les matchs NBA se jouent en 4 quart-temps de 12 minutes, soit 48 minutes au total.', 5);
+
+INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(96, 'En Grèce', 1), (96, 'En Italie', 0), (96, 'En Égypte', 0), (96, 'En Chine', 0),
+(97, '11', 1), (97, '9', 0), (97, '10', 0), (97, '12', 0),
+(98, 'Usain Bolt', 1), (98, 'Tyson Gay', 0), (98, 'Yohan Blake', 0), (98, 'Carl Lewis', 0),
+(99, 'Vrai', 1), (99, 'Faux', 0),
+(100, '48 minutes', 1), (100, '40 minutes', 0), (100, '60 minutes', 0), (100, '50 minutes', 0);
+
+-- Quiz 20: Légendes des Jeux Vidéo (Catégorie Jeux Vidéo & Pop Culture - ID 18)
+INSERT INTO `quizzes` (`id`, `category_id`, `title`, `description`, `time_limit`, `xp_reward`) VALUES
+(20, 18, 'Légendes des Jeux Vidéo', 'Rétrogaming, sagas mythiques et culture jeux vidéo.', 20, 15);
+
+INSERT INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+(101, 20, 'mcq', 'Quel plombier moustachu est la mascotte officielle de la firme Nintendo ?', 10, 'Créé par Shigeru Miyamoto, Mario a fait sa première apparition sous le nom de Jumpman en 1981.', 1),
+(102, 20, 'mcq', 'En quelle année la toute première Game Boy portable est-elle sortie au Japon ?', 10, 'La Game Boy originale est sortie le 21 avril 1989 et a révolutionné le jeu portable.', 2),
+(103, 20, 'mcq', 'Dans quelle saga incarne-t-on le personnage de Link pour sauver le royaume d\'Hyrule ?', 10, 'The Legend of Zelda est l\'une des franchises d\'action-aventure les plus acclamées de l\'histoire.', 3),
+(104, 20, 'true_false', 'Le jeu vidéo Tetris a été conçu en 1984 par l\'ingénieur soviétique Alexey Pajitnov.', 10, 'Pajitnov a développé la version initiale de Tetris sur un ordinateur Elektronika 60.', 4),
+(105, 20, 'mcq', 'Quel jeu de construction de blocs est devenu le jeu vidéo le plus vendu au monde ?', 10, 'Minecraft (créé par Markus Persson) dépasse les 300 millions d\'exemplaires vendus.', 5);
+
+INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(101, 'Mario', 1), (101, 'Sonic', 0), (101, 'Pac-Man', 0), (101, 'Rayman', 0),
+(102, '1989', 1), (102, '1985', 0), (102, '1992', 0), (102, '1995', 0),
+(103, 'The Legend of Zelda', 1), (103, 'Final Fantasy', 0), (103, 'Dark Souls', 0), (103, 'Dragon Quest', 0),
+(104, 'Vrai', 1), (104, 'Faux', 0),
+(105, 'Minecraft', 1), (105, 'Tetris', 0), (105, 'Grand Theft Auto V', 0), (105, 'Wii Sports', 0);
+
+-- Quiz 21: Saveurs & Cuisines du Monde (Catégorie Gastronomie - ID 19)
+INSERT INTO `quizzes` (`id`, `category_id`, `title`, `description`, `time_limit`, `xp_reward`) VALUES
+(21, 19, 'Saveurs & Cuisines du Monde', 'Un tour du monde gastronomique des plats emblématiques, épices et traditions culinaires.', 20, 15);
+
+INSERT INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+(106, 21, 'mcq', 'De quel pays européen le plat traditionnel appelé Paëlla est-il originaire ?', 10, 'La paëlla est née dans la région de Valence en Espagne au XIXe siècle.', 1),
+(107, 21, 'mcq', 'Quel est l\'ingrédient végétal principal de la sauce Pesto alla Genovese italienne ?', 10, 'Le pesto génois traditionnel réunit du basilic frais, des pignons de pin, de l\'ail et du parmesan.', 2),
+(108, 21, 'mcq', 'Quel champignon souterrain d\'exception est surnommé le "diamant noir" en gastronomie ?', 10, 'La truffe noire du Périgord (Tuber melanosporum) est très recherchée pour ses arômes uniques.', 3),
+(109, 21, 'true_false', 'Le Tofu est obtenu à partir du caillage du jus ou lait de soja.', 10, 'Le tofu est un aliment traditionnel asiatique fabriqué en faisant cailler du lait de soja frais.', 4),
+(110, 21, 'mcq', 'Quelle épice extrêmement précieuse est extraite des stigmates séchés du Crocus sativus ?', 10, 'Le safran nécessite la récolte manuelle de dizaines de milliers de fleurs pour un seul kilo.', 5);
+
+INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(106, 'L\'Espagne', 1), (106, 'L\'Italie', 0), (106, 'Le Portugal', 0), (106, 'La Grèce', 0),
+(107, 'Le basilic', 1), (107, 'Le persil', 0), (107, 'La menthe', 0), (107, 'L\'origan', 0),
+(108, 'La truffe noire', 1), (108, 'Le morille', 0), (108, 'Le cèpe', 0), (108, 'La girolle', 0),
+(109, 'Vrai', 1), (109, 'Faux', 0),
+(110, 'Le safran', 1), (110, 'La vanille', 0), (110, 'Le cardamome', 0), (110, 'La curcuma', 0);
+
+-- Quiz 22: Séries Culte & Animation (Catégorie Séries TV - ID 20)
+INSERT INTO `quizzes` (`id`, `category_id`, `title`, `description`, `time_limit`, `xp_reward`) VALUES
+(22, 20, 'Séries Culte & Animation', 'Testez vos connaissances sur les grandes séries télévisées et dessins animés célèbres.', 20, 15);
+
+INSERT INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+(111, 22, 'mcq', 'Dans quelle ville fictive américaine se déroule l\'intrigue de la série d\'animation "Les Simpson" ?', 10, 'Les Simpson vivent à Springfield, un nom de ville fictif très répandu aux États-Unis.', 1),
+(112, 22, 'mcq', 'Quel siège en épées forgées est au centre des conflits de pouvoir dans "Game of Thrones" ?', 10, 'Le Trône de Fer a été forgé selon la légende par le souffle du dragon Balerion.', 2),
+(113, 22, 'mcq', 'Quelle créature électrique est le compagnon fidèle de Sacha dans la série animée Pokémon ?', 10, 'Pikachu est la mascotte universelle de la franchise Pokémon depuis 1996.', 3),
+(114, 22, 'true_false', 'L\'intrigue principale de la comédie culte "Friends" se déroule à New York.', 10, 'Friends suit les péripéties de six amis vivant dans le quartier de Greenwich Village à New York.', 4),
+(115, 22, 'mcq', 'Quel professeur de chimie devient un producteur redouté sous le pseudo Heisenberg dans "Breaking Bad" ?', 10, 'Walter White (incarné par Bryan Cranston) est le protagoniste incontournable de Breaking Bad.', 5);
+
+INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(111, 'Springfield', 1), (111, 'Quahog', 0), (111, 'South Park', 0), (111, 'Sunnydale', 0),
+(112, 'Le Trône de Fer', 1), (112, 'Le Trône d\'Obsidienne', 0), (112, 'Le Siège de Valyria', 0), (112, 'La Chaire du Nord', 0),
+(113, 'Pikachu', 1), (113, 'Dracaufeu', 0), (113, 'Salameche', 0), (113, 'Evoli', 0),
+(114, 'Vrai', 1), (114, 'Faux', 0),
+(115, 'Walter White', 1), (115, 'Jesse Pinkman', 0), (115, 'Hank Schrader', 0), (115, 'Saul Goodman', 0);
+
+-- Quiz 23: Biodiversité & Planète (Catégorie Écologie - ID 21)
+INSERT INTO `quizzes` (`id`, `category_id`, `title`, `description`, `time_limit`, `xp_reward`) VALUES
+(23, 21, 'Biodiversité & Planète', 'Un parcours éducatif sur le climat, les écosystèmes et la protection de l\'environnement.', 20, 15);
+
+INSERT INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+(116, 23, 'mcq', 'Quel gaz à effet de serre est principalement produit par la combustion des énergies fossiles ?', 10, 'Le dioxyde de carbone (CO2) est le principal responsable du réchauffement d\'origine humaine.', 1),
+(117, 23, 'mcq', 'Quelle immense forêt tropicale d\'Amérique du Sud est qualifiée de "poumon vert" de la Terre ?', 10, 'La forêt amazonienne couvre plus de 5,5 millions de km² et abrite une biodiversité exceptionnelle.', 2),
+(118, 23, 'mcq', 'Quelle source d\'énergie renouvelable utilise la force du rayonnement du Soleil ?', 10, 'L\'énergie solaire photovoltaïque ou thermique exploite la lumière solaire.', 3),
+(119, 23, 'true_false', 'Les récifs coralliens abritent environ 25% de la biodiversité marine mondiale.', 10, 'Malgré leur surface réduite (moins de 1% des océans), les coraux sont des trésors de biodiversité.', 4),
+(120, 23, 'mcq', 'Quel processus biologique permet aux plantes vertes d\'absorber du CO2 et de rejeter de l\'oxygène ?', 10, 'La photosynthèse transforme la lumière du soleil, l\'eau et le CO2 en matière organique et oxygène.', 5);
+
+INSERT INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(116, 'Le dioxyde de carbone (CO2)', 1), (116, 'Le méthane', 0), (116, 'Le néon', 0), (116, 'L\'hélium', 0),
+(117, 'La forêt amazonienne', 1), (117, 'La taïga de Sibérie', 0), (117, 'La forêt du Congo', 0), (117, 'La forêt de Brocéliande', 0),
+(118, 'L\'énergie solaire', 1), (118, 'L\'énergie éolienne', 0), (118, 'L\'énergie géothermique', 0), (118, 'L\'énergie hydraulique', 0),
+(119, 'Vrai', 1), (119, 'Faux', 0),
+(120, 'La photosynthèse', 1), (120, 'La fermentation', 0), (120, 'La méthanisation', 0), (120, 'La digestion', 0);

@@ -39,6 +39,18 @@ if (!function_exists('getCategoryIcon')) {
                 return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18M12 12m-9 0a9 9 0 1118 0 9 9 0 01-18 0z"></path></svg>';
             case 'communisme':
                 return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499c.173-.42.766-.42.94 0l2.373 5.766 6.136.564c.453.042.633.616.293.929l-4.636 4.267 1.349 6.009c.1.442-.383.805-.765.566L12 18.257l-5.17 2.733c-.382.239-.865-.124-.765-.566l1.349-6.009-4.636-4.267c-.34-.313-.16-.887.293-.929l6.136-.564 2.373-5.766z"></path></svg>';
+            case 'musique':
+                return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12 0c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>';
+            case 'sport':
+                return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 003-3V9a3 3 0 00-3-3h-9a3 3 0 00-3 3v6.75a3 3 0 003 3m9 0v-11.25M7.5 18.75V7.5M12 15a3 3 0 100-6 3 3 0 000 6z"></path></svg>';
+            case 'pop-culture':
+                return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 0M6.5 11h.01M9.5 11h.01M15.5 11h.01M18.5 11h.01M12 21a9 9 0 100-18 9 9 0 000 18z"></path></svg>';
+            case 'gastronomie':
+                return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m-6-9h12M4.5 7.5h15"></path></svg>';
+            case 'series-tv':
+                return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25zM7.5 9h9M7.5 12h9M7.5 15h4.5"></path></svg>';
+            case 'ecologie':
+                return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0v-8m0 0l3-3m-3 3l-3-3"></path></svg>';
             default:
                 return '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"></path></svg>';
         }
@@ -143,6 +155,48 @@ if (!function_exists('getCategoryColorClasses')) {
                     'text' => 'text-sky-600 dark:text-sky-400',
                     'border' => 'hover:border-sky-500/40 focus-within:ring-sky-500/40',
                     'iconBg' => 'bg-sky-500/20 text-sky-600 dark:text-sky-300'
+                ];
+            case 'musique':
+                return [
+                    'bg' => 'bg-pink-500/10 dark:bg-pink-500/5',
+                    'text' => 'text-pink-600 dark:text-pink-400',
+                    'border' => 'hover:border-pink-500/40 focus-within:ring-pink-500/40',
+                    'iconBg' => 'bg-pink-500/20 text-pink-600 dark:text-pink-300'
+                ];
+            case 'sport':
+                return [
+                    'bg' => 'bg-orange-500/10 dark:bg-orange-500/5',
+                    'text' => 'text-orange-600 dark:text-orange-400',
+                    'border' => 'hover:border-orange-500/40 focus-within:ring-orange-500/40',
+                    'iconBg' => 'bg-orange-500/20 text-orange-600 dark:text-orange-300'
+                ];
+            case 'pop-culture':
+                return [
+                    'bg' => 'bg-purple-500/10 dark:bg-purple-500/5',
+                    'text' => 'text-purple-600 dark:text-purple-400',
+                    'border' => 'hover:border-purple-500/40 focus-within:ring-purple-500/40',
+                    'iconBg' => 'bg-purple-500/20 text-purple-600 dark:text-purple-300'
+                ];
+            case 'gastronomie':
+                return [
+                    'bg' => 'bg-amber-500/10 dark:bg-amber-500/5',
+                    'text' => 'text-amber-600 dark:text-amber-400',
+                    'border' => 'hover:border-amber-500/40 focus-within:ring-amber-500/40',
+                    'iconBg' => 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                ];
+            case 'series-tv':
+                return [
+                    'bg' => 'bg-blue-500/10 dark:bg-blue-500/5',
+                    'text' => 'text-blue-600 dark:text-blue-400',
+                    'border' => 'hover:border-blue-500/40 focus-within:ring-blue-500/40',
+                    'iconBg' => 'bg-blue-500/20 text-blue-600 dark:text-blue-300'
+                ];
+            case 'ecologie':
+                return [
+                    'bg' => 'bg-emerald-500/10 dark:bg-emerald-500/5',
+                    'text' => 'text-emerald-600 dark:text-emerald-400',
+                    'border' => 'hover:border-emerald-500/40 focus-within:ring-emerald-500/40',
+                    'iconBg' => 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
                 ];
             default:
                 return [
