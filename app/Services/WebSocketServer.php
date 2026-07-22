@@ -509,6 +509,10 @@ class WebSocketServer implements MessageComponentInterface
      */
     private function triggerAsyncAIGeneration(): void
     {
+        if (!function_exists('proc_open')) {
+            return; // Safety guard: if proc_open is disabled, skip silently
+        }
+
         $apiKey = getenv('MISTRAL_API_KEY') ?: '';
         if (empty($apiKey)) {
             return; // No key configured — skip silently

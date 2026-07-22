@@ -12,7 +12,7 @@ RUN apk add --no-cache \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 RUN echo "expose_php = Off" > /usr/local/etc/php/conf.d/security.ini && \
-    echo "disable_functions = exec,shell_exec,system,passthru,proc_open,popen,show_source" >> /usr/local/etc/php/conf.d/security.ini && \
+    echo "disable_functions = exec,shell_exec,system,passthru,show_source" >> /usr/local/etc/php/conf.d/security.ini && \
     echo "php_admin_value[open_basedir] = /var/www:/tmp" >> /usr/local/etc/php-fpm.d/www.conf
 
 WORKDIR /var/www
