@@ -119,11 +119,11 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 <template x-for="cat in categories" :key="cat.id">
                     <button @click="pickCategory(cat.id)"
-                            :disabled="!currentPickerIsMe"
-                            :class="currentPickerIsMe
+                            :disabled="!currentPickerIsMe || isPicking"
+                            :class="currentPickerIsMe && !isPicking
                                 ? 'hover:border-violet-500 hover:bg-violet-500/10 hover:scale-105 cursor-pointer active:scale-95'
                                 : 'opacity-40 cursor-not-allowed'"
-                            class="p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-left transition-all duration-200 bg-slate-50/50 dark:bg-slate-800/20 min-h-[80px] flex flex-col justify-between">
+                            class="p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-left transition-all duration-200 bg-slate-50/50 dark:bg-slate-800/20 min-h-[80px] flex flex-col justify-between relative overflow-hidden">
                         <div class="font-bold text-xs sm:text-sm leading-snug" x-text="cat.name"></div>
                         <div class="text-[10px] sm:text-[11px] text-slate-400 mt-1 line-clamp-2 leading-tight" x-text="cat.description || ''"></div>
                     </button>
@@ -367,6 +367,7 @@ function duelArena() {
         aiSecondsLeft: 12,
         aiGenerationProgress: 0,
         aiProgressInterval: null,
+        isPicking: false,
 
         get currentPickerIsMe() { return this.currentPicker === this.myId; },
         get currentPickerName() {
@@ -447,12 +448,14 @@ function duelArena() {
                     break;
 
                 case 'category_picked':
+                    this.isPicking     = false;
                     this.currentPicker = data.current_picker;
                     this.picksDone     = data.picks_done;
                     this.allPicked     = data.all_picked;
                     break;
 
                 case 'generating_questions':
+                    this.isPicking = false;
                     this.roomState = 'generating';
                     this.aiSecondsLeft = data.seconds || 12;
                     this.aiGenerationProgress = 0;
@@ -465,6 +468,7 @@ function duelArena() {
                     break;
 
                 case 'selection_complete':
+                    this.isPicking = false;
                     clearInterval(this.aiProgressInterval);
                     this.aiGenerationProgress = 100;
                     this.allPicked      = data.picked;
@@ -559,7 +563,8 @@ function duelArena() {
         },
 
         pickCategory(categoryId) {
-            if (!this.currentPickerIsMe) return;
+            if (!this.currentPickerIsMe || this.isPicking) return;
+            this.isPicking = true;
             this.socket.send(JSON.stringify({
                 action: 'pick_category',
                 room_code: this.roomCode,
