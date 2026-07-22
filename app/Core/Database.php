@@ -101,6 +101,18 @@ class Database
                         $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
                         $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
                     } catch (Exception $e) {}
+
+                    // Ensure user_question_history table exists for tracking played questions per user
+                    try {
+                        $pdo->exec("CREATE TABLE IF NOT EXISTS `user_question_history` (
+                            `id` INT AUTO_INCREMENT PRIMARY KEY,
+                            `user_id` INT NOT NULL,
+                            `question_id` INT NOT NULL,
+                            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE KEY `uk_user_question` (`user_id`, `question_id`),
+                            INDEX `idx_uqh_user` (`user_id`)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                    } catch (Exception $e) {}
                 }
             }
         } catch (Exception $e) {

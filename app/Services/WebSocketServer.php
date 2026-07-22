@@ -461,8 +461,9 @@ class WebSocketServer implements MessageComponentInterface
         $selectionDone  = ($nextPickIndex >= $totalPicks);
 
         if ($selectionDone) {
-            // Load questions: 3 per picked category
-            $questions = $this->loadQuestionsFromCategoryPicks($room['picked_categories']);
+            // Load questions: 3 per picked category (excluding previously played questions for room players)
+            $playerUserIds = array_map(fn($p) => (int)$p['user_id'], array_values($room['players']));
+            $questions = $this->loadQuestionsFromCategoryPicks($room['picked_categories'], $playerUserIds);
 
             if (empty($questions)) {
                 throw new \Exception('Pas assez de questions pour les catégories choisies.');
@@ -542,11 +543,26 @@ class WebSocketServer implements MessageComponentInterface
         }
     }
 
-    private function loadQuestionsFromCategoryPicks(array $pickedByPlayer): array
+    private function loadQuestionsFromCategoryPicks(array $pickedByPlayer, array $playerUserIds = []): array
     {
         $questionsPerCategory = 3;
         $allQuestions = [];
         $seen = [];
+
+        // Exclude all questions previously played by any player in this room across past matches
+        if (!empty($playerUserIds)) {
+            $cleanUserIds = array_map('intval', array_filter($playerUserIds));
+            if (!empty($cleanUserIds)) {
+                try {
+                    $pastPlayed = Database::fetchAll(
+                        "SELECT DISTINCT question_id FROM user_question_history WHERE user_id IN (" . implode(',', $cleanUserIds) . ")"
+                    );
+                    foreach ($pastPlayed as $pp) {
+                        $seen[] = (int)$pp['question_id'];
+                    }
+                } catch (Exception $e) {}
+            }
+        }
 
         foreach ($pickedByPlayer as $uid => $catIds) {
             foreach ($catIds as $catId) {
@@ -846,6 +862,15 @@ class WebSocketServer implements MessageComponentInterface
             $userId = $player['user_id'];
             $score = $player['score'];
             $totalQuestions = count($this->rooms[$code]['questions']);
+
+            // Save history of questions played by this user so they are not repeated in future matches
+            foreach ($this->rooms[$code]['questions'] as $q) {
+                try {
+                    Database::query("INSERT IGNORE INTO user_question_history (user_id, question_id) VALUES (?, ?)", [
+                        $userId, $q['id']
+                    ]);
+                } catch (Exception $e) {}
+            }
 
             // Calculate metrics
             $correctCount = 0;
