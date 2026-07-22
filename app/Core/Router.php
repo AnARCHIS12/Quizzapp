@@ -64,15 +64,16 @@ class Router
         if ($uri !== '/' && str_ends_with($uri, '/')) {
             $uri = rtrim($uri, '/');
         }
-        $method = $_SERVER['REQUEST_METHOD'];
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $effectiveMethod = $method === 'HEAD' ? 'GET' : $method;
 
         // Overwrite method if _method post parameter is set (for PUT/DELETE forms)
         if ($method === 'POST' && isset($_POST['_method'])) {
-            $method = strtoupper($_POST['_method']);
+            $effectiveMethod = strtoupper($_POST['_method']);
         }
 
         foreach ($this->routes as $route) {
-            if ($route['method'] === $method && preg_match($route['regex'], $uri, $matches)) {
+            if ($route['method'] === $effectiveMethod && preg_match($route['regex'], $uri, $matches)) {
                 // Extract named parameters
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
