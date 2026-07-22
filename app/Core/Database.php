@@ -86,16 +86,13 @@ class Database
             // Ensure matches table status ENUM includes 'selecting' phase
             $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
 
-            // Ensure new categories (Musique, Sport, Pop Culture, Gastronomie, Series TV, Ecologie) are seeded
-            $stmtNewCat = $pdo->query("SELECT id FROM categories WHERE id = 16");
-            if ($stmtNewCat && !$stmtNewCat->fetch()) {
-                $baseDir = dirname(__DIR__, 2);
-                $seedFile = $baseDir . '/database/seed.sql';
-                if (file_exists($seedFile)) {
-                    $pdo->exec("SET NAMES utf8mb4");
-                    $seedSql = file_get_contents($seedFile);
-                    $pdo->exec($seedSql);
-                }
+            // Ensure new categories (Musique, Sport, Pop Culture, Gastronomie, Series TV, Ecologie) and seed data are populated
+            $baseDir = dirname(__DIR__, 2);
+            $seedFile = $baseDir . '/database/seed.sql';
+            if (file_exists($seedFile)) {
+                $pdo->exec("SET NAMES utf8mb4");
+                $seedSql = file_get_contents($seedFile);
+                $pdo->exec($seedSql);
             }
         } catch (Exception $e) {
             error_log("Auto database seeding attempt: " . $e->getMessage());
