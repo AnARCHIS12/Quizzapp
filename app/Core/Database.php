@@ -113,6 +113,11 @@ class Database
                             INDEX `idx_uqh_user` (`user_id`)
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
                     } catch (Exception $e) {}
+
+                    // Ensure match_room_code column exists on questions table for tagging freshly generated duel questions
+                    try {
+                        $pdo->exec("ALTER TABLE `questions` ADD COLUMN `match_room_code` VARCHAR(10) DEFAULT NULL, ADD INDEX `idx_questions_room` (`match_room_code`)");
+                    } catch (Exception $e) {}
                 }
             }
         } catch (Exception $e) {

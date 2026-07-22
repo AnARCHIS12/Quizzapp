@@ -475,13 +475,13 @@ class WebSocketServer implements MessageComponentInterface
                 }
                 $chosenCatIds = array_unique($chosenCatIds);
 
-                // Launch targeted AI generation ONLY for chosen categories
-                $this->triggerAsyncAIGenerationForCategories($chosenCatIds);
+                // Launch targeted AI generation ONLY for chosen categories, tagged with this match code
+                $this->triggerAsyncAIGenerationForCategories($code, $chosenCatIds);
 
                 // Show loading screen to players during AI generation (12 seconds)
                 $this->broadcast($code, [
                     'type'    => 'generating_questions',
-                    'message' => '🤖 L\'IA génère vos questions personnalisées...',
+                    'message' => '🤖 L\'IA génère 18 nouvelles questions personnalisées...',
                     'seconds' => 12,
                     'picked'  => $allPicked
                 ]);
@@ -492,13 +492,21 @@ class WebSocketServer implements MessageComponentInterface
                 $room['picked_categories_snapshot'] = $room['picked_categories'];
                 $room['player_user_ids_snapshot']   = $playerUserIds;
 
-                // After 12s, load fresh questions (AI should be done by then) and start
+                // After 12s, load the 18 freshly AI-generated questions for this room code
                 $loop = \React\EventLoop\Loop::get();
                 $loop->addTimer(12.0, function() use ($code, $allPicked) {
                     if (!isset($this->rooms[$code])) return;
-                    $pickedCats  = $this->rooms[$code]['picked_categories_snapshot'] ?? $this->rooms[$code]['picked_categories'];
-                    $playerUids  = $this->rooms[$code]['player_user_ids_snapshot']   ?? [];
-                    $questions   = $this->loadQuestionsFromCategoryPicks($pickedCats, $playerUids);
+
+                    // Priority 1: Load 100% brand new AI-generated questions for this exact room
+                    $questions = $this->loadFreshAIQuestionsForRoom($code);
+
+                    // Priority 2: Fallback to DB pool if AI generation was unavailable
+                    if (empty($questions)) {
+                        $pickedCats = $this->rooms[$code]['picked_categories_snapshot'] ?? $this->rooms[$code]['picked_categories'];
+                        $playerUids = $this->rooms[$code]['player_user_ids_snapshot']   ?? [];
+                        $questions  = $this->loadQuestionsFromCategoryPicks($pickedCats, $playerUids);
+                    }
+
                     if (empty($questions)) return;
                     shuffle($questions);
                     $this->rooms[$code]['questions'] = $questions;
@@ -558,9 +566,9 @@ class WebSocketServer implements MessageComponentInterface
 
     /**
      * Launch async background PHP process to generate AI questions for SPECIFIC chosen categories only.
-     * Called right after category selection so questions exactly match the chosen themes.
+     * Tagged with roomCode so the game loads 100% freshly generated questions for this duel.
      */
-    private function triggerAsyncAIGenerationForCategories(array $catIds): void
+    private function triggerAsyncAIGenerationForCategories(string $roomCode, array $catIds): void
     {
         if (!function_exists('proc_open')) return;
         if (empty($catIds)) return;
@@ -569,7 +577,7 @@ class WebSocketServer implements MessageComponentInterface
         if (!file_exists($scriptPath)) return;
 
         $args = implode(' ', array_map('intval', $catIds));
-        $cmd  = "php {$scriptPath} {$args}";
+        $cmd  = "php {$scriptPath} " . escapeshellarg($roomCode) . " {$args}";
 
         $descriptors = [
             0 => ['file', '/dev/null', 'r'],
@@ -580,6 +588,38 @@ class WebSocketServer implements MessageComponentInterface
         if (is_resource($proc)) {
             \proc_close($proc);
         }
+    }
+
+    /**
+     * Load freshly generated AI questions specifically created for this match room.
+     */
+    private function loadFreshAIQuestionsForRoom(string $roomCode): array
+    {
+        $rows = Database::fetchAll(
+            "SELECT * FROM questions WHERE match_room_code = ? ORDER BY id ASC",
+            [$roomCode]
+        );
+
+        if (empty($rows)) return [];
+
+        $allQuestions = [];
+        foreach ($rows as $q) {
+            $rawAnswers = Database::fetchAll(
+                "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
+                [$q['id']]
+            );
+            $unique = [];
+            foreach ($rawAnswers as $ans) {
+                $k = trim((string)$ans['answer_text']);
+                if (!isset($unique[$k])) {
+                    $unique[$k] = $ans;
+                }
+            }
+            $q['answers'] = array_values($unique);
+            $allQuestions[] = $q;
+        }
+
+        return $allQuestions;
     }
 
     /**

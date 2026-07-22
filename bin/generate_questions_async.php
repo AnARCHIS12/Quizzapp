@@ -35,8 +35,15 @@ if (empty($mistralKey)) {
     exit(0);
 }
 
-// Get category IDs from arguments
-$categoryIds = array_map('intval', array_slice($argv, 1));
+// Get room code and category IDs from arguments
+$roomCode = null;
+if (isset($argv[1]) && !is_numeric($argv[1])) {
+    $roomCode = strtoupper(trim($argv[1]));
+    $categoryIds = array_map('intval', array_slice($argv, 2));
+} else {
+    $categoryIds = array_map('intval', array_slice($argv, 1));
+}
+
 if (empty($categoryIds)) {
     exit(0);
 }
@@ -96,7 +103,7 @@ foreach ($categoryIds as $catId) {
     }
 
     // Prompt with strict category scoping
-    $prompt = "Tu es un expert en quiz éducatif francophone. Génère exactement 5 questions de quiz uniques et inédites sur {$themeContext}.
+    $prompt = "Tu es un expert en quiz éducatif francophone. Génère exactement 3 questions de quiz uniques et inédites sur {$themeContext}.
 
 {$scopeWarning}
 
@@ -174,12 +181,12 @@ Les questions doivent être variées, précises, éducatives et difficiles. Évi
         $stmt->execute([$quizId, $questionText]);
         if ((int)$stmt->fetchColumn() > 0) continue;
 
-        // Insert question
+        // Insert question tagged with match_room_code
         $stmt = $pdo->prepare(
-            "INSERT INTO questions (quiz_id, question_text, question_type, points, explanation, sorting_order)
-             VALUES (?, ?, 'qcm', ?, ?, 0)"
+            "INSERT INTO questions (quiz_id, question_text, question_type, points, explanation, sorting_order, match_room_code)
+             VALUES (?, ?, 'qcm', ?, ?, 0, ?)"
         );
-        $stmt->execute([$quizId, $questionText, $points, $explanation]);
+        $stmt->execute([$quizId, $questionText, $points, $explanation, $roomCode]);
         $questionId = (int)$pdo->lastInsertId();
 
         // Insert answers
