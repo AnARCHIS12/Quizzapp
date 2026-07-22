@@ -531,10 +531,10 @@ class WebSocketServer implements MessageComponentInterface
             1 => ['file', '/dev/null', 'w'],
             2 => ['file', '/dev/null', 'w'],
         ];
-        $proc = proc_open($cmd, $descriptors, $pipes);
+        $proc = \proc_open($cmd, $descriptors, $pipes);
         if (is_resource($proc)) {
             // Immediately release; the child runs independently
-            proc_close($proc);
+            \proc_close($proc);
         }
     }
 
