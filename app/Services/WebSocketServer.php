@@ -236,7 +236,15 @@ class WebSocketServer implements MessageComponentInterface
                 $questions = Database::fetchAll("SELECT * FROM questions ORDER BY RAND() LIMIT 10");
             }
             foreach ($questions as &$q) {
-                $q['answers'] = Database::fetchAll("SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?", [$q['id']]);
+                $rawAnswers = Database::fetchAll("SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?", [$q['id']]);
+                $unique = [];
+                foreach ($rawAnswers as $ans) {
+                    $k = trim((string)$ans['answer_text']);
+                    if (!isset($unique[$k])) {
+                        $unique[$k] = $ans;
+                    }
+                }
+                $q['answers'] = array_values($unique);
             }
 
             $this->rooms[$code] = [
@@ -511,10 +519,18 @@ class WebSocketServer implements MessageComponentInterface
 
                 foreach ($rows as $q) {
                     if (!in_array($q['id'], $seen, true)) {
-                        $q['answers'] = Database::fetchAll(
+                        $rawAnswers = Database::fetchAll(
                             "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
                             [$q['id']]
                         );
+                        $unique = [];
+                        foreach ($rawAnswers as $ans) {
+                            $k = trim((string)$ans['answer_text']);
+                            if (!isset($unique[$k])) {
+                                $unique[$k] = $ans;
+                            }
+                        }
+                        $q['answers'] = array_values($unique);
                         $allQuestions[] = $q;
                         $seen[] = $q['id'];
                     }
@@ -527,10 +543,18 @@ class WebSocketServer implements MessageComponentInterface
             $fallbackRows = Database::fetchAll("SELECT * FROM questions ORDER BY RAND() LIMIT 18");
             foreach ($fallbackRows as $fq) {
                 if (!in_array($fq['id'], $seen, true)) {
-                    $fq['answers'] = Database::fetchAll(
+                    $rawAnswers = Database::fetchAll(
                         "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
                         [$fq['id']]
                     );
+                    $unique = [];
+                    foreach ($rawAnswers as $ans) {
+                        $k = trim((string)$ans['answer_text']);
+                        if (!isset($unique[$k])) {
+                            $unique[$k] = $ans;
+                        }
+                    }
+                    $fq['answers'] = array_values($unique);
                     $allQuestions[] = $fq;
                     $seen[] = $fq['id'];
                 }
