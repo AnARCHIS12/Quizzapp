@@ -531,6 +531,47 @@ class AuthController
     }
 
     /**
+     * Update password for authenticated user
+     */
+    public function updatePassword(): void
+    {
+        $sessionUser = Session::get('user');
+        $userId = $sessionUser['id'];
+
+        $currentPassword = $_POST['current_password'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        $user = User::findById($userId);
+
+        if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
+            Session::setFlash('error', 'Mot de passe actuel incorrect.');
+            header('Location: /settings');
+            return;
+        }
+
+        if (empty($newPassword) || strlen($newPassword) < 8) {
+            Session::setFlash('error', 'Le nouveau mot de passe doit contenir au moins 8 caractères.');
+            header('Location: /settings');
+            return;
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            Session::setFlash('error', 'Les nouveaux mots de passe ne correspondent pas.');
+            header('Location: /settings');
+            return;
+        }
+
+        User::update($userId, [
+            'password_hash' => password_hash($newPassword, PASSWORD_BCRYPT)
+        ]);
+
+        Session::logAction($userId, "Modification du mot de passe depuis les paramètres");
+        Session::setFlash('success', 'Votre mot de passe a été modifié avec succès.');
+        header('Location: /settings');
+    }
+
+    /**
      * Generate & store 2FA secret
      */
     public function generate2FA(): void

@@ -66,6 +66,7 @@ $router->post('/reset-password', [AuthController::class, 'resetPassword'], [CSRF
 $router->get('/dashboard', [AuthController::class, 'dashboard'], [AuthMiddleware::class]);
 $router->get('/settings', [AuthController::class, 'showSettings'], [AuthMiddleware::class]);
 $router->post('/settings/profile', [AuthController::class, 'updateProfile'], [AuthMiddleware::class, CSRFMiddleware::class]);
+$router->post('/settings/password', [AuthController::class, 'updatePassword'], [AuthMiddleware::class, CSRFMiddleware::class]);
 $router->post('/settings/2fa/generate', [AuthController::class, 'generate2FA'], [AuthMiddleware::class, CSRFMiddleware::class]);
 $router->post('/settings/2fa/enable', [AuthController::class, 'enable2FA'], [AuthMiddleware::class, CSRFMiddleware::class]);
 $router->post('/settings/2fa/disable', [AuthController::class, 'disable2FA'], [AuthMiddleware::class, CSRFMiddleware::class]);

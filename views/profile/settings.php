@@ -60,6 +60,43 @@
                 </form>
             </div>
 
+            <!-- 2. Change Password Form -->
+            <div class="glass-card rounded-2xl p-6 md:p-8 shadow-md">
+                <h2 class="text-xl font-bold mb-6 tracking-tight">Changer le mot de passe</h2>
+
+                <form action="/settings/password" method="POST" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+
+                    <div>
+                        <label for="current_password" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Mot de passe actuel</label>
+                        <input type="password" id="current_password" name="current_password" required
+                               class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
+                               placeholder="••••••••">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label for="new_password" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Nouveau mot de passe</label>
+                            <input type="password" id="new_password" name="new_password" required
+                                   class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
+                                   placeholder="••••••••">
+                            <span class="text-xs text-slate-400 mt-1 block">Au moins 8 caractères requis.</span>
+                        </div>
+
+                        <div>
+                            <label for="confirm_password" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Confirmer le nouveau mot de passe</label>
+                            <input type="password" id="confirm_password" name="confirm_password" required
+                                   class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
+                                   placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="py-2.5 px-6 font-bold text-white rounded-xl bg-violet-600 hover:bg-violet-500 transition-all shadow-md">
+                        Changer mon mot de passe
+                    </button>
+                </form>
+            </div>
+
             <!-- 2. Security 2FA settings -->
             <div class="glass-card rounded-2xl p-6 md:p-8 shadow-md">
                 <h2 class="text-xl font-bold mb-4 tracking-tight">Sécurité & Double Authentification</h2>

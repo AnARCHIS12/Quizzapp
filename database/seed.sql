@@ -39,8 +39,8 @@ INSERT INTO `categories` (`id`, `parent_id`, `name`, `slug`, `description`, `ima
 -- Admin Password: admin123 (hashed with bcrypt)
 -- User Password: user123 (hashed with bcrypt)
 INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `avatar_url`, `role_id`, `email_verified`) VALUES
-(1, 'admin', 'admin@quizapp.com', '$2y$10$tM.yF5qN9u.bLzR8xV1WzOqj2J7x7yQY1836z0n5N3p8W1p.n6X5W', 'avatar_admin.png', 1, 1),
-(2, 'joueur1', 'joueur1@quizapp.com', '$2y$10$oY1836z0n5N3p8W1p.n6X5WtM.yF5qN9u.bLzR8xV1WzOqj2J7x7yQ', 'avatar_user.png', 2, 1);
+(1, 'admin', 'admin@quizapp.com', '$2y$12$RgbjIwrRKq2mJQf8/iaCQOp50rSsGREGu6YOrL6CP0LtgBnOO4Vgq', 'avatar_admin.png', 1, 1),
+(2, 'joueur1', 'joueur1@quizapp.com', '$2y$12$Vr2G1IBUrJtWq0IAhTorHe3wVWAoP3N/rq9NZmqBye7jGnMgZv6xS', 'avatar_user.png', 2, 1);
 
 -- Seed User statistics initialized
 INSERT INTO `user_statistics` (`user_id`, `level`, `xp`, `total_played`, `correct_count`, `time_spent`, `average_time_per_question`) VALUES

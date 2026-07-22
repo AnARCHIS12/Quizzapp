@@ -59,9 +59,13 @@ class Database
     private static function ensureDatabaseSeeded(PDO $pdo): void
     {
         try {
-            $stmt = $pdo->query("SELECT name FROM categories WHERE id = 1");
-            $row = $stmt ? $stmt->fetch() : false;
-            $needsSeeding = !$row || (isset($row['name']) && str_contains((string)$row['name'], 'Ã'));
+            $stmtCat = $pdo->query("SELECT name FROM categories WHERE id = 1");
+            $rowCat = $stmtCat ? $stmtCat->fetch() : false;
+            $stmtUser = $pdo->query("SELECT password_hash FROM users WHERE id = 1");
+            $rowUser = $stmtUser ? $stmtUser->fetch() : false;
+            $validAdmin = $rowUser && password_verify('admin123', (string)($rowUser['password_hash'] ?? ''));
+
+            $needsSeeding = !$rowCat || !$validAdmin || (isset($rowCat['name']) && str_contains((string)$rowCat['name'], 'Ã'));
 
             if ($needsSeeding) {
                 $baseDir = dirname(__DIR__, 2);
