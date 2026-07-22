@@ -66,6 +66,9 @@ try {
     exit(0);
 }
 
+// Track all question texts generated in this run to avoid same-text duplicates across repeated categories
+$generatedThisRun = [];
+
 foreach ($categoryIds as $catId) {
     // Get category with its parent name for precise context
     $stmt = $pdo->prepare(
@@ -176,10 +179,15 @@ Les questions doivent être variées, précises, éducatives et difficiles. Évi
 
         if (empty($questionText) || count($answers) < 2) continue;
 
-        // Skip duplicates
+        // Skip if already generated in this run (same category processed twice = 2nd pick)
+        if (in_array($questionText, $generatedThisRun, true)) continue;
+
+        // Skip exact duplicates already in DB
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM questions WHERE quiz_id = ? AND question_text = ?");
         $stmt->execute([$quizId, $questionText]);
         if ((int)$stmt->fetchColumn() > 0) continue;
+
+        $generatedThisRun[] = $questionText;
 
         // Insert question tagged with match_room_code
         $stmt = $pdo->prepare(

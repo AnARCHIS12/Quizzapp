@@ -463,17 +463,17 @@ class WebSocketServer implements MessageComponentInterface
         if ($selectionDone) {
             $playerUserIds = array_map(fn($p) => (int)$p['user_id'], array_values($room['players']));
             $apiKey = getenv('MISTRAL_API_KEY') ?: '';
-            $hasAI  = !empty($apiKey) && function_exists('proc_open');
+            $hasAI  = !empty($apiKey) && function_exists('popen');
 
             if ($hasAI) {
-                // Collect all chosen category IDs
+                // Collect ALL category picks, preserving duplicates so each pick = 3 questions = 18 total
                 $chosenCatIds = [];
                 foreach ($room['picked_categories'] as $uid => $catIds) {
                     foreach ($catIds as $cId) {
                         $chosenCatIds[] = (int)$cId;
                     }
                 }
-                $chosenCatIds = array_unique($chosenCatIds);
+                // Do NOT array_unique: if same category picked twice -> 6 questions for it -> always 18 total
 
                 // Launch targeted AI generation ONLY for chosen categories, tagged with this match code
                 $this->triggerAsyncAIGenerationForCategories($code, $chosenCatIds);
