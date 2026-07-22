@@ -311,6 +311,11 @@ class WebSocketServer implements MessageComponentInterface
             'players' => $this->getPlayersList($code)
         ]);
 
+        // When 2nd player joins, trigger AI question generation in background for all categories
+        if (count($this->rooms[$code]['players']) >= 2 && $this->rooms[$code]['status'] === 'waiting') {
+            $this->triggerAsyncAIGeneration();
+        }
+
         // Catch-up for rejoining players if game is in progress
         if ($this->rooms[$code]['status'] === 'selecting') {
             $categories = Database::fetchAll(
@@ -494,6 +499,42 @@ class WebSocketServer implements MessageComponentInterface
                 'total_picks'    => $totalPicks,
                 'all_picked'     => $allPicked
             ]);
+        }
+    }
+
+    /**
+     * Launch async background PHP process to generate fresh AI questions for all categories.
+     * Non-blocking: uses proc_open with STDIN/STDOUT/STDERR redirected to /dev/null.
+     * Falls back silently if MISTRAL_API_KEY is not set.
+     */
+    private function triggerAsyncAIGeneration(): void
+    {
+        $apiKey = getenv('MISTRAL_API_KEY') ?: '';
+        if (empty($apiKey)) {
+            return; // No key configured — skip silently
+        }
+
+        // Get all category IDs to pre-generate questions for
+        $categories = Database::fetchAll("SELECT id FROM categories ORDER BY RAND() LIMIT 10");
+        $catIds = array_column($categories, 'id');
+        if (empty($catIds)) return;
+
+        $scriptPath = dirname(__DIR__, 2) . '/bin/generate_questions_async.php';
+        if (!file_exists($scriptPath)) return;
+
+        $args = implode(' ', array_map('intval', $catIds));
+        $cmd  = "php {$scriptPath} {$args}";
+
+        // Launch fully detached background process (non-blocking)
+        $descriptors = [
+            0 => ['file', '/dev/null', 'r'],
+            1 => ['file', '/dev/null', 'w'],
+            2 => ['file', '/dev/null', 'w'],
+        ];
+        $proc = proc_open($cmd, $descriptors, $pipes);
+        if (is_resource($proc)) {
+            // Immediately release; the child runs independently
+            proc_close($proc);
         }
     }
 
