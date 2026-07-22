@@ -183,24 +183,26 @@ Dans le tableau de bord de votre instance Dockhand :
 
 ### 3. Configurer les variables d'environnement dans l'UI de Dockhand
 Dans la section **Environment Variables** (ou le formulaire `.env` intégré de Dockhand), ajoutez les paires de clés/valeurs requises :
-*   `DOCKER_IMAGE_PHP` : `liberchat/quizzapp-php:latest` (image d'application pré-construite)
-*   `DOCKER_IMAGE_WS` : `liberchat/quizzapp-websocket:latest` (image WebSocket pré-construite)
+*   `DOCKER_IMAGE_APP` : `liberchat/quizzapp-app:latest` (image d'application consolidée tout-en-un)
 *   `DB_HOST` : `db` (doit correspondre au nom de service de la base de données dans le compose)
 *   `DB_PORT` : `3306`
 *   `DB_NAME` : `quizzapp`
 *   `DB_USER` : `quizzapp_user`
 *   `DB_PASS` : `mettez_un_mot_de_passe_base_de_donnees_robuste`
-*   `WS_PORT` : `8080`
+*   `WS_HOST` : `quiz.votre-domaine.com` (votre nom de domaine public)
+*   `WS_PORT` : Laissez vide en production derrière un SSL/Reverse Proxy
+*   `WS_URL` : Laissez vide en production derrière un SSL/Reverse Proxy
 *   `JWT_SECRET` : `mettez_une_cle_secrete_aleatoire_tres_longue_ici`
 *   `MISTRAL_API_KEY` : `votre_cle_mistral_api` (facultatif)
 *   `APP_PORT` : `7777` (Port local exposé sur l'hôte, très utile si les ports 80 et 443 sont déjà pris par un autre serveur web / proxy global sur votre machine !)
 
 *Pour la configuration SMTP (Emails) :*
 *   `SMTP_HOST` : `smtp.votre-fournisseur.com` (laisser vide pour simuler localement dans `logs/mail.log`)
-*   `SMTP_PORT` : `587`
+*   `SMTP_PORT` : `587` (ou 465)
 *   `SMTP_USER` : `votre_compte_mail@domaine.com`
 *   `SMTP_PASS` : `mot_de_passe_smtp`
-*   `SMTP_SECURE` : `tls`
+*   `SMTP_SECURE` : `tls` (ou `ssl` pour le port 465)
+*   `SMTP_ALLOW_SELF_SIGNED` : `true` (ou `false`)
 *   `MAIL_FROM_ADDRESS` : `no-reply@votre-domaine.com`
 *   `MAIL_FROM_NAME` : `Quizzapp`
 
@@ -262,7 +264,7 @@ Pour router Quizzapp via Pangolin :
 1. Démarrez Quizzapp en local ou sur votre hôte Docker en exposant l'application sur le port local de votre choix (ex: `APP_PORT=7777`).
 2. Dans l'interface d'administration de **Pangolin** :
    *   Ajoutez un nouveau **Service** (ou Route) associé à votre domaine public (ex: `quiz.votre-domaine.com`).
-   *   Définissez la destination cible (Target URL) vers l'IP locale ou le conteneur sur le port `7777` : `http://127.0.0.1:7777`.
+   *   Définissez la destination cible (Target URL) vers l'IP locale ou l'IP de la passerelle Docker de votre serveur sur le port `7777` : `http://172.17.0.1:7777` ou `http://192.168.1.141:7777` (Évitez `127.0.0.1` car le conteneur Pangolin le résoudra sur lui-même).
    *   **Important** : Activez l'option de support des **WebSockets** (ou *HTTP Upgrade*) dans les paramètres de la route de Pangolin (obligatoire pour le serveur de duels Ratchet).
    *   Laissez Pangolin générer et renouveler automatiquement votre certificat SSL.
 3. Configurez vos variables d'environnement Quizzapp (`.env` ou variables de Stack) :
@@ -270,7 +272,7 @@ Pour router Quizzapp via Pangolin :
    *   `WS_PORT` : Laissez cette variable **vide** (l'application utilisera le port standard sécurisé `443` et se connectera automatiquement en `wss://`).
 
 ### 4. Déployer et démarrer
-Cliquez sur **Deploy Stack** (Déployer) sur Dockhand (ou exécutez `docker compose -f docker-compose.prod.yml up -d`). Dockhand va cloner le dépôt, récupérer les images Docker et instancier tous les conteneurs. Les scripts de migration de base de données se lanceront d'eux-mêmes au premier démarrage.
+Cliquez sur **Deploy Stack** (Déployer) sur Dockhand (ou exécutez `docker compose -f docker-compose.prod.yml up -d`). Dockhand va cloner le dépôt, récupérer les images Docker et instancier tous les conteneurs. Les scripts de migration et l'auto-réparation en cas d'accents mal encodés se lanceront d'eux-mêmes au premier démarrage.
 
 ---
 
