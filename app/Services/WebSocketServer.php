@@ -554,7 +554,7 @@ class WebSocketServer implements MessageComponentInterface
                 
                 $notInClause = !empty($seen) ? "AND q.id NOT IN (" . implode(',', array_map('intval', $seen)) . ")" : "";
 
-                // Fetch 3 unseen questions matching this category or its subcategories
+                // 1. Fetch 3 unseen questions matching this category or its subcategories
                 $rows = Database::fetchAll(
                     "SELECT DISTINCT q.* FROM questions q
                      JOIN quizzes quiz ON q.quiz_id = quiz.id
@@ -565,16 +565,17 @@ class WebSocketServer implements MessageComponentInterface
                     [$key, $key]
                 );
 
-                // If not enough unseen questions in this subcategory, fallback to parent or general pool
+                // 2. If not enough unseen questions, fallback to parent category or sibling subcategories
                 if (count($rows) < 3) {
                     $extraRows = Database::fetchAll(
                         "SELECT DISTINCT q.* FROM questions q
                          JOIN quizzes quiz ON q.quiz_id = quiz.id
                          JOIN categories c ON quiz.category_id = c.id
-                         WHERE (c.id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL) OR 1=1) {$notInClause}
+                         WHERE (c.id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                             OR c.parent_id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)) {$notInClause}
                          ORDER BY RAND()
                          LIMIT 3",
-                        [$key]
+                        [$key, $key]
                     );
                     foreach ($extraRows as $er) {
                         if (count($rows) >= 3) break;
@@ -584,35 +585,29 @@ class WebSocketServer implements MessageComponentInterface
                     }
                 }
 
-                foreach ($rows as $q) {
-                    if (!in_array($q['id'], $seen, true)) {
-                        $rawAnswers = Database::fetchAll(
-                            "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
-                            [$q['id']]
-                        );
-                        $unique = [];
-                        foreach ($rawAnswers as $ans) {
-                            $k = trim((string)$ans['answer_text']);
-                            if (!isset($unique[$k])) {
-                                $unique[$k] = $ans;
-                            }
+                // 3. If still not enough, reuse questions from this SAME category (allow repeats across rounds if necessary)
+                if (count($rows) < 3) {
+                    $repeatRows = Database::fetchAll(
+                        "SELECT DISTINCT q.* FROM questions q
+                         JOIN quizzes quiz ON q.quiz_id = quiz.id
+                         JOIN categories c ON quiz.category_id = c.id
+                         WHERE c.id = ? OR c.parent_id = ?
+                         ORDER BY RAND()
+                         LIMIT 3",
+                        [$key, $key]
+                    );
+                    foreach ($repeatRows as $rr) {
+                        if (count($rows) >= 3) break;
+                        if (!in_array($rr['id'], array_column($rows, 'id'), true)) {
+                            $rows[] = $rr;
                         }
-                        $q['answers'] = array_values($unique);
-                        $allQuestions[] = $q;
-                        $seen[] = $q['id'];
                     }
                 }
-            }
-        }
 
-        // Fallback: If not enough questions from chosen categories, fill with random questions from DB
-        if (count($allQuestions) < 6) {
-            $fallbackRows = Database::fetchAll("SELECT * FROM questions ORDER BY RAND() LIMIT 18");
-            foreach ($fallbackRows as $fq) {
-                if (!in_array($fq['id'], $seen, true)) {
+                foreach ($rows as $q) {
                     $rawAnswers = Database::fetchAll(
                         "SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?",
-                        [$fq['id']]
+                        [$q['id']]
                     );
                     $unique = [];
                     foreach ($rawAnswers as $ans) {
@@ -621,9 +616,9 @@ class WebSocketServer implements MessageComponentInterface
                             $unique[$k] = $ans;
                         }
                     }
-                    $fq['answers'] = array_values($unique);
-                    $allQuestions[] = $fq;
-                    $seen[] = $fq['id'];
+                    $q['answers'] = array_values($unique);
+                    $allQuestions[] = $q;
+                    $seen[] = $q['id'];
                 }
             }
         }

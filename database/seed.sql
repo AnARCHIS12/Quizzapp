@@ -449,3 +449,146 @@ INSERT IGNORE INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
 (118, 'L\'énergie solaire', 1), (118, 'L\'énergie éolienne', 0), (118, 'L\'énergie géothermique', 0), (118, 'L\'énergie hydraulique', 0),
 (119, 'Vrai', 1), (119, 'Faux', 0),
 (120, 'La photosynthèse', 1), (120, 'La fermentation', 0), (120, 'La méthanisation', 0), (120, 'La digestion', 0);
+
+
+-- Additional Questions to reach 20+ questions per category for maximum duel variety
+INSERT IGNORE INTO `questions` (`id`, `quiz_id`, `type`, `question_text`, `points`, `explanation`, `sorting_order`) VALUES
+-- Astronomie (Quiz 1)
+(1001, 1, 'mcq', 'Quelle est la planète la plus chaude du Système Solaire ?', 10, 'Vénus a une température moyenne de 465°C à cause de son effet de serre extrême.', 6),
+(1002, 1, 'mcq', 'Combien de lunes possède la planète Mars ?', 10, 'Mars possède 2 satellites naturels : Phobos et Déimos.', 7),
+(1003, 1, 'mcq', 'Quelle planète possède les anneaux les plus spectaculaires et visibles ?', 10, 'Saturne est célèbre pour son système d\'anneaux constitué de glace et de poussières.', 8),
+(1004, 1, 'mcq', 'Quel est le plus grand volcan du système solaire ?', 10, 'Olympus Mons sur Mars culmine à 21,9 km de hauteur.', 9),
+(1005, 1, 'mcq', 'Quelle planète tourne sur elle-même sur un axe presque horizontal ?', 10, 'Uranus a une inclinaison d\'axe de 97,8°, elle semble "rouler" sur son orbite.', 10),
+
+-- Conquête spatiale (Quiz 2)
+(1006, 2, 'mcq', 'En quelle année le premier télescope spatial Hubble a-t-il été mis en orbite ?', 10, 'Hubble a été lancé par la navette Discovery en 1990.', 6),
+(1007, 2, 'mcq', 'Quel est le nom du télescope spatial lancé en 2021 pour succéder à Hubble ?', 10, 'Le télescope James Webb (JWST) a été lancé le 25 décembre 2021.', 7),
+(1008, 2, 'mcq', 'Quelle sonde spatiale est l\'objet fabriqué par l\'homme le plus éloigné de la Terre ?', 10, 'Voyager 1, lancée en 1977, voyage désormais dans l\'espace interstellaire.', 8),
+(1009, 2, 'mcq', 'Quel est le premier rover à s\'être posé sur Mars en 1997 ?', 10, 'Sojourner était le tout premier petit rover de la mission Mars Pathfinder.', 9),
+(1010, 2, 'mcq', 'Comment s\'appelait la première station spatiale soviétique lancée en 1971 ?', 10, 'Saliout 1 fut la première station spatiale mise en orbite terrestre.', 10),
+
+-- Géographie (Quiz 3)
+(1011, 3, 'mcq', 'Quelle est la capitale du Portugal ?', 10, 'Lisbonne est la capitale et la plus grande ville du Portugal.', 6),
+(1012, 3, 'mcq', 'Quelle est la capitale de l\'Égypte ?', 10, 'Le Caire est la capitale égyptienne et la plus grande métropole du monde arabe.', 7),
+(1013, 3, 'mcq', 'Quelle est la capitale de l\'Islande ?', 10, 'Reykjavik est la capitale la plus septentrionale du monde.', 8),
+(1014, 3, 'mcq', 'Quelle est la capitale de la Corée du Sud ?', 10, 'Séoul compte plus de 9 millions d\'habitants intra-muros.', 9),
+(1015, 3, 'mcq', 'Quelle est la capitale de la Norvège ?', 10, 'Oslo a été appelée Christiania entre 1624 et 1925.', 10),
+
+-- Fleuves & Montagnes (Quiz 4)
+(1016, 4, 'mcq', 'Quel est le plus long fleuve d\'Europe occidentale ?', 10, 'Le Danube s\'étend sur 2850 km à travers 10 pays.', 6),
+(1017, 4, 'mcq', 'Quel est le plus haut sommet du continent américain (Amérique du Sud) ?', 10, 'L\'Aconcagua en Argentine culmine à 6961 mètres d\'altitude.', 7),
+(1018, 4, 'mcq', 'Quel fleuve traverse la ville de Londres ?', 10, 'La Tamise (Thames) se jette dans la mer du Nord.', 8),
+(1019, 4, 'mcq', 'Quelle chaîne de montagnes sépare l\'Europe de l\'Asie ?', 10, 'L\'Oural s\'étend sur 2500 km en Russie et au Kazakhstan.', 9),
+(1020, 4, 'mcq', 'Quel est le plus grand lac naturel d\'eau douce d\'Afrique par sa superficie ?', 10, 'Le lac Victoria s\'étend sur 68 800 km².', 10),
+
+-- Algèbre & Maths (Quiz 5)
+(1021, 5, 'mcq', 'Quel mathématicien grec est célèbre pour le théorème sur les triangles rectangles ?', 10, 'Pythagore de Samos énonça le théorème relationnant l\'hypoténuse aux côtés.', 6),
+(1022, 5, 'mcq', 'Quelle est la valeur approximative du nombre Pi (π) à deux décimales ?', 10, '3,14 est l\'arrondi le plus courant du nombre irrationnel Pi.', 7),
+(1023, 5, 'mcq', 'Quel est le résultat de 7 multiplié par 8 ?', 10, '7 x 8 = 56.', 8),
+(1024, 5, 'mcq', 'Comment appelle-t-on un polygone à 8 côtés ?', 10, 'Un octogone possède 8 angles et 8 sommets.', 9),
+(1025, 5, 'mcq', 'Quel est le plus petit nombre premier supérieur à 10 ?', 10, '11 est un nombre premier uniquement divisible par 1 et par lui-même.', 10),
+
+-- Informatique & Web (Quiz 6)
+(1026, 6, 'mcq', 'Qui est considéré comme l\'inventeur du World Wide Web en 1989 ?', 10, 'Tim Berners-Lee a conçu le HTTP et le HTML au CERN.', 6),
+(1027, 6, 'mcq', 'Quel système d\'exploitation libre a été créé par Linus Torvalds en 1991 ?', 10, 'Linux est le noyau open-source utilisé mondialement sur les serveurs et Android.', 7),
+(1028, 6, 'mcq', 'Que signifie l\'sigle HTML ?', 10, 'HyperText Markup Language est le langage de balisage du Web.', 8),
+(1029, 6, 'mcq', 'Quel langage de programmation est le langage natif exécuté dans les navigateurs Web ?', 10, 'JavaScript anime les interfaces interactives côté client.', 9),
+(1030, 6, 'mcq', 'Quelle entreprise a développé le langage Java en 1995 ?', 10, 'Sun Microsystems (racheté par Oracle) créa Java.', 10),
+
+-- Anarchisme (Quiz 14)
+(1031, 14, 'mcq', 'Qui a écrit l\'ouvrage majeur "L\'Entraide, un facteur de l\'évolution" (1902) ?', 10, 'Pierre Kropotkine démontre que la solidarité biologique favorise la survie des espèces.', 6),
+(1032, 14, 'mcq', 'Quelle penseuse féministe anarchiste est célèbre pour ses combats aux États-Unis au XXe siècle ?', 10, 'Emma Goldman a défendu l\'émancipation des femmes, la liberté d\'expression et le pacifisme.', 7),
+(1033, 14, 'mcq', 'Quel journal et courant anarchiste italien a été co-fondé par Errico Malatesta ?', 10, 'Errico Malatesta a fondé le journal Umanità Nova en 1920.', 8),
+(1034, 14, 'mcq', 'Quel hymne et slogan symbolisent le syndicalisme révolutionnaire et anarcho-syndicalisme en Espagne en 1936 ?', 10, 'A las Barricadas et la CNT-FAI incarnent la révolution sociale espagnole.', 9),
+(1035, 14, 'mcq', 'Quel philosophe individualiste allemand est l\'auteur de "L\'Unique et sa propriété" (1844) ?', 10, 'Max Stirner a théorisément fondé l\'individualisme libertaire radical.', 10),
+
+-- Socialisme (Quiz 13)
+(1036, 13, 'mcq', 'Quel homme politique français a fondé le journal L\'Humanité en 1904 et s\'est opposé à la guerre en 1914 ?', 10, 'Jean Jaurès fut une grande figure du socialisme humaniste français.', 6),
+(1037, 13, 'mcq', 'Quel est le concept clé de la valeur selon la théorie économique de Karl Marx ?', 10, 'La plus-value représente la valeur de la force de travail non rémunérée par le capitaliste.', 7),
+(1038, 13, 'mcq', 'Quel industriel gallois du XIXe siècle est considéré comme un pionnier du mouvement coopératif ?', 10, 'Robert Owen créa des usines coopératives modèles à New Lanark.', 8),
+
+-- Musique (Quiz 18)
+(1039, 18, 'mcq', 'Quel compositeur classique allemand a écrit la Neuvième Symphonie en étant atteint de surdité ?', 10, 'Ludwig van Beethoven composa son hymne à la joie malgré sa surdité totale.', 6),
+(1040, 18, 'mcq', 'Quel groupe de rock britannique a sorti l\'album culte "The Dark Side of the Moon" en 1973 ?', 10, 'Pink Floyd est un monument du rock psychédélique et progressif.', 7),
+(1041, 18, 'mcq', 'Quel instrument de musique à cordes frottées possède la tessiture la plus grave dans un orchestre symphonique ?', 10, 'La contrebasse est le plus grand et le plus grave des instruments à cordes.', 8),
+(1042, 18, 'mcq', 'Quelle chanteuse américaine fut surnommée "La Reine de la Soul" ?', 10, 'Aretha Franklin est célèbre pour Respect et Think.', 9),
+(1043, 18, 'mcq', 'Dans quel pays le genre musical du Reggae est-il né dans les années 1960 ?', 10, 'Le Reggae s\'est développé en Jamaïque avec Bob Marley et The Wailers.', 10),
+
+-- Sport (Quiz 19)
+(1044, 19, 'mcq', 'Combien de joueurs composent une équipe de football sur le terrain ?', 10, 'Une équipe de football compte 11 joueurs titulaires.', 6),
+(1045, 19, 'mcq', 'Quel athlète jamaïcain détient le record du monde du 100 mètres en 9,58 secondes ?', 10, 'Usain Bolt a établi ce record aux Championnats du Monde de Berlin en 2009.', 7),
+(1046, 19, 'mcq', 'Dans quel sport attribue-t-on des points par ippon, waza-ari et yuko ?', 10, 'Le Judo est un art martial d\'origine japonaise créé par Jigoro Kano.', 8),
+(1047, 19, 'mcq', 'Tous les combien d\'années les Jeux Olympiques d\'été ont-ils lieu ?', 10, 'Les Jeux Olympiques d\'été se déroulent tous les 4 ans.', 9),
+(1048, 19, 'mcq', 'Quel tournoi du Grand Chelem de tennis se joue sur terre battue à Paris ?', 10, 'Roland-Garros est le seul tournoi du Grand Chelem disputé sur terre battue.', 10),
+
+-- Gastronomie (Quiz 21)
+(1049, 21, 'mcq', 'Quel fromage français AOP à pâte persillée est fabriqué avec du lait cru de brebis dans l\'Aveyron ?', 10, 'Le Roquefort est affiné dans les caves naturelles des monts de Combalou.', 6),
+(1050, 21, 'mcq', 'Quel ingrédient principal compose la sauce pesto alla genovese traditionnelle ?', 10, 'Le basilic frais pilé avec pignons, ail, huile d\'olive et parmesan.', 7),
+(1051, 21, 'mcq', 'Quel plat traditionnel espagnol à base de riz est parfumé au safran ?', 10, 'La Paella est originaire de la région de Valence en Espagne.', 8),
+(1052, 21, 'mcq', 'Quel champignon souterrain rare et très recherché est surnommé "le diamant noir" ?', 10, 'La truffe noire du Périgord (Tuber melanosporum).', 9),
+(1053, 21, 'mcq', 'Dans quelle cuisine traditionnelle retrouve-t-on la soupe Miso et le dashi ?', 10, 'La cuisine japonaise utilise le dashi (bouillon d\'algues et bonite) et la pâte de soja fermentée Miso.', 10);
+
+INSERT IGNORE INTO `answers` (`question_id`, `answer_text`, `is_correct`) VALUES
+(1001, 'Mercure', 0), (1001, 'Vénus', 1), (1001, 'Mars', 0), (1001, 'Jupiter', 0),
+(1002, '1 luna', 0), (1002, '2 lunes', 1), (1002, '4 lunes', 0), (1002, 'Aucune', 0),
+(1003, 'Jupiter', 0), (1003, 'Saturne', 1), (1003, 'Uranus', 0), (1003, 'Neptune', 0),
+(1004, 'Mont Everest', 0), (1004, 'Olympus Mons', 1), (1004, 'Mauna Kea', 0), (1004, 'Kilimandjaro', 0),
+(1005, 'Vénus', 0), (1005, 'Uranus', 1), (1005, 'Mars', 0), (1005, 'Mercure', 0),
+
+(1006, '1980', 0), (1006, '1990', 1), (1006, '2000', 0), (1006, '2010', 0),
+(1007, 'Hubble 2', 0), (1007, 'James Webb', 1), (1007, 'Kepler', 0), (1007, 'Spitzer', 0),
+(1008, 'Apollo 11', 0), (1008, 'Voyager 1', 1), (1008, 'Curiosity', 0), (1008, 'Pioneer 10', 0),
+(1009, 'Opportunity', 0), (1009, 'Sojourner', 1), (1009, 'Perseverance', 0), (1009, 'Spirit', 0),
+(1010, 'Mir', 0), (1010, 'Saliout 1', 1), (1010, 'Skylab', 0), (1010, 'Tiangong', 0),
+
+(1011, 'Porto', 0), (1011, 'Lisbonne', 1), (1011, 'Faro', 0), (1011, 'Braga', 0),
+(1012, 'Alexandrie', 0), (1012, 'Le Caire', 1), (1012, 'Louxor', 0), (1012, 'Gizeh', 0),
+(1013, 'Akureyri', 0), (1013, 'Reykjavik', 1), (1013, 'Keflavik', 0), (1013, 'Vik', 0),
+(1014, 'Busan', 0), (1014, 'Séoul', 1), (1014, 'Incheon', 0), (1014, 'Daegu', 0),
+(1015, 'Bergen', 0), (1015, 'Oslo', 1), (1015, 'Trondheim', 0), (1015, 'Stavanger', 0),
+
+(1016, 'Le Rhin', 0), (1016, 'Le Danube', 1), (1016, 'La Loire', 0), (1016, 'Le Rhône', 0),
+(1017, 'Mont Blanc', 0), (1017, 'L\'Aconcagua', 1), (1017, 'Chimborazo', 0), (1017, 'Huascarán', 0),
+(1018, 'La Seine', 0), (1018, 'La Tamise', 1), (1018, 'Le Mersey', 0), (1018, 'Le Severn', 0),
+(1019, 'Les Alpes', 0), (1019, 'L\'Oural', 1), (1019, 'Les Pyrénées', 0), (1019, 'Les Carpates', 0),
+(1020, 'Lac Tchad', 0), (1020, 'Lac Victoria', 1), (1020, 'Lac Tanganyika', 0), (1020, 'Lac Malawi', 0),
+
+(1021, 'Euclide', 0), (1021, 'Pythagore', 1), (1021, 'Archimède', 0), (1021, 'Thalès', 0),
+(1022, '2,71', 0), (1022, '3,14', 1), (1022, '1,61', 0), (1022, '4,12', 0),
+(1023, '48', 0), (1023, '56', 1), (1023, '64', 0), (1023, '54', 0),
+(1024, 'Hexagone', 0), (1024, 'Octogone', 1), (1024, 'Pentagone', 0), (1024, 'Décagone', 0),
+(1025, '12', 0), (1025, '11', 1), (1025, '13', 0), (1025, '15', 0),
+
+(1026, 'Bill Gates', 0), (1026, 'Tim Berners-Lee', 1), (1026, 'Steve Jobs', 0), (1026, 'Mark Zuckerberg', 0),
+(1027, 'Windows', 0), (1027, 'Linux', 1), (1027, 'MS-DOS', 0), (1027, 'macOS', 0),
+(1028, 'High Tech Machine Language', 0), (1028, 'HyperText Markup Language', 1), (1028, 'Home Tool Markup Language', 0), (1028, 'Hyperlink Text Main Logic', 0),
+(1029, 'Python', 0), (1029, 'JavaScript', 1), (1029, 'C++', 0), (1029, 'PHP', 0),
+(1030, 'Microsoft', 0), (1030, 'Sun Microsystems', 1), (1030, 'IBM', 0), (1030, 'Apple', 0),
+
+(1031, 'Pierre-Joseph Proudhon', 0), (1031, 'Pierre Kropotkine', 1), (1031, 'Mikhail Bakounine', 0), (1031, 'Max Stirner', 0),
+(1032, 'Rosa Luxemburg', 0), (1032, 'Emma Goldman', 1), (1032, 'Louise Michel', 0), (1032, 'Clara Zetkin', 0),
+(1033, 'L\'Avanti', 0), (1033, 'Umanità Nova', 1), (1033, 'Il Manifesto', 0), (1033, 'L\'Unità', 0),
+(1034, 'L\'Internationale', 0), (1034, 'A las Barricadas', 1), (1034, 'Bella Ciao', 0), (1034, 'Le Temps des Cerises', 0),
+(1035, 'Friedrich Nietzsche', 0), (1035, 'Max Stirner', 1), (1035, 'Arthur Schopenhauer', 0), (1035, 'G.W.F. Hegel', 0),
+
+(1036, 'Léon Blum', 0), (1036, 'Jean Jaurès', 1), (1036, 'Jules Guesde', 0), (1036, 'Aristide Briand', 0),
+(1037, 'Le capital fixe', 0), (1037, 'La plus-value', 1), (1037, 'L\'offre et la demande', 0), (1037, 'Le taux d\'usure', 0),
+(1038, 'Adam Smith', 0), (1038, 'Robert Owen', 1), (1038, 'David Ricardo', 0), (1038, 'John Stuart Mill', 0),
+
+(1039, 'W.A. Mozart', 0), (1039, 'Ludwig van Beethoven', 1), (1039, 'J.S. Bach', 0), (1039, 'Frédéric Chopin', 0),
+(1040, 'The Beatles', 0), (1040, 'Pink Floyd', 1), (1040, 'Led Zeppelin', 0), (1040, 'The Rolling Stones', 0),
+(1041, 'Le violoncelle', 0), (1041, 'La contrebasse', 1), (1041, 'L\'alto', 0), (1041, 'Le violon', 0),
+(1042, 'Diana Ross', 0), (1042, 'Aretha Franklin', 1), (1042, 'Whitney Houston', 0), (1042, 'Nina Simone', 0),
+(1043, 'Cuba', 0), (1043, 'Jamaïque', 1), (1043, 'Trinité-et-Tobago', 0), (1043, 'Haïti', 0),
+
+(1044, '9', 0), (1044, '11', 1), (1044, '10', 0), (1044, '12', 0),
+(1045, 'Carl Lewis', 0), (1045, 'Usain Bolt', 1), (1045, 'Tyson Gay', 0), (1045, 'Asafa Powell', 0),
+(1046, 'Karate', 0), (1046, 'Judo', 1), (1046, 'Taekwondo', 0), (1046, 'Kendo', 0),
+(1047, '2 ans', 0), (1047, '4 ans', 1), (1047, '3 ans', 0), (1047, '5 ans', 0),
+(1048, 'Wimbledon', 0), (1048, 'Roland-Garros', 1), (1048, 'US Open', 0), (1048, 'Open d\'Australie', 0),
+
+(1049, 'Camembert', 0), (1049, 'Roquefort', 1), (1049, 'Comté', 0), (1049, 'Brie', 0),
+(1050, 'Persil', 0), (1050, 'Basilic', 1), (1050, 'Estragon', 0), (1050, 'Ciboulette', 0),
+(1051, 'Risotto', 0), (1051, 'Paella', 1), (1051, 'Couscous', 0), (1051, 'Jambalaya', 0),
+(1052, 'Cèpe', 0), (1052, 'Truffe noire', 1), (1052, 'Morille', 0), (1052, 'Chanterelle', 0),
+(1053, 'Cuisine chinoise', 0), (1053, 'Cuisine japonaise', 1), (1053, 'Cuisine thaïlandaise', 0), (1053, 'Cuisine indienne', 0);

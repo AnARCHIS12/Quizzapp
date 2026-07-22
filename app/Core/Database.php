@@ -73,7 +73,10 @@ class Database
             $rowUser = $stmtUser ? $stmtUser->fetch() : false;
             $validAdmin = $rowUser && password_verify('admin123', (string)($rowUser['password_hash'] ?? ''));
 
-            $needsSeeding = ($catCount < 21) || !$validAdmin;
+            $stmtQ = $pdo->query("SELECT COUNT(*) FROM questions");
+            $qCount = $stmtQ ? (int)$stmtQ->fetchColumn() : 0;
+
+            $needsSeeding = ($catCount < 21) || ($qCount < 100) || !$validAdmin;
 
             if ($needsSeeding) {
                 $baseDir = dirname(__DIR__, 2);
