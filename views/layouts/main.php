@@ -211,10 +211,10 @@
                             </div>
                         </div>
                     <?php else: ?>
-                        <!-- Auth buttons -->
-                        <div class="flex items-center space-x-2">
-                            <a href="/login" class="px-3 py-1.5 text-sm font-medium hover:text-brand-500 transition-colors">Connexion</a>
-                            <a href="/register" class="px-4 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 rounded-lg shadow-md hover:shadow-lg transition-all duration-200">S'inscrire</a>
+                        <!-- Auth buttons (Desktop & Tablet) -->
+                        <div class="hidden sm:flex items-center space-x-2">
+                            <a href="/login" class="px-3 py-1.5 text-sm font-medium hover:text-brand-500 transition-colors whitespace-nowrap">Connexion</a>
+                            <a href="/register" class="px-4 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 whitespace-nowrap">S'inscrire</a>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -227,8 +227,18 @@
             <a href="/" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Accueil</a>
             <a href="/#categories-list" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Quiz</a>
             <a href="/duel" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Duel Privé</a>
-            <?php if (isset($_SESSION['user']) && (int)$_SESSION['user']['role_id'] === 1): ?>
-                <a href="/admin" @click="mobileMenuOpen = false" class="block text-sm font-semibold text-amber-500 py-2 transition-colors">Administration</a>
+            <?php if (isset($_SESSION['user'])): ?>
+                <a href="/dashboard" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Mon Tableau de Bord</a>
+                <a href="/settings" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Paramètres</a>
+                <?php if ((int)$_SESSION['user']['role_id'] === 1): ?>
+                    <a href="/admin" @click="mobileMenuOpen = false" class="block text-sm font-semibold text-amber-500 py-2 transition-colors">Administration</a>
+                <?php endif; ?>
+                <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="block text-sm font-semibold text-red-500 py-2 transition-colors">Déconnexion</a>
+            <?php else: ?>
+                <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col space-y-2">
+                    <a href="/login" @click="mobileMenuOpen = false" class="w-full text-center px-4 py-2 text-sm font-medium border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Connexion</a>
+                    <a href="/register" @click="mobileMenuOpen = false" class="w-full text-center px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 rounded-lg shadow-md transition-all">S'inscrire</a>
+                </div>
             <?php endif; ?>
         </div>
     </header>
