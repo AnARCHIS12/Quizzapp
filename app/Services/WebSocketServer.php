@@ -306,7 +306,7 @@ class WebSocketServer implements MessageComponentInterface
         // Catch-up for rejoining players if game is in progress
         if ($this->rooms[$code]['status'] === 'selecting') {
             $categories = Database::fetchAll(
-                "SELECT id, name, description FROM categories WHERE is_active = 1 ORDER BY name ASC"
+                "SELECT id, name, description FROM categories ORDER BY name ASC"
             );
             $conn->send(json_encode([
                 'type' => 'category_selection_start',
@@ -387,7 +387,7 @@ class WebSocketServer implements MessageComponentInterface
 
         // Load all available categories
         $categories = Database::fetchAll(
-            "SELECT id, name, description FROM categories WHERE is_active = 1 ORDER BY name ASC"
+            "SELECT id, name, description FROM categories ORDER BY name ASC"
         );
 
         Database::query("UPDATE matches SET status = 'selecting' WHERE room_code = ?", [$code]);
@@ -425,7 +425,7 @@ class WebSocketServer implements MessageComponentInterface
         }
 
         // Validate category exists
-        $cat = Database::fetch("SELECT id, name FROM categories WHERE id = ? AND is_active = 1", [$catId]);
+        $cat = Database::fetch("SELECT id, name FROM categories WHERE id = ?", [$catId]);
         if (!$cat) {
             $conn->send(json_encode(['type' => 'error', 'message' => 'Catégorie introuvable.']));
             return;
