@@ -507,16 +507,33 @@ class WebSocketServer implements MessageComponentInterface
             foreach ($catIds as $catId) {
                 $key = (int)$catId;
                 
-                // Fetch questions matching this category, its children, or its parent
+                // Fetch questions matching this exact category or its subcategories
                 $rows = Database::fetchAll(
                     "SELECT DISTINCT q.* FROM questions q
                      JOIN quizzes quiz ON q.quiz_id = quiz.id
                      JOIN categories c ON quiz.category_id = c.id
-                     WHERE c.id = ? OR c.parent_id = ? OR c.id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                     WHERE c.id = ? OR c.parent_id = ?
                      ORDER BY RAND()
                      LIMIT 3",
-                    [$key, $key, $key]
+                    [$key, $key]
                 );
+
+                // If not enough questions in this subcategory, fallback to parent category
+                if (count($rows) < 3) {
+                    $extraRows = Database::fetchAll(
+                        "SELECT DISTINCT q.* FROM questions q
+                         JOIN quizzes quiz ON q.quiz_id = quiz.id
+                         JOIN categories c ON quiz.category_id = c.id
+                         WHERE c.id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                         ORDER BY RAND()
+                         LIMIT 3",
+                        [$key]
+                    );
+                    foreach ($extraRows as $er) {
+                        if (count($rows) >= 3) break;
+                        $rows[] = $er;
+                    }
+                }
 
                 foreach ($rows as $q) {
                     if (!in_array($q['id'], $seen, true)) {
