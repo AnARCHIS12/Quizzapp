@@ -158,14 +158,14 @@ class User
     public static function getMatchHistory(int $id): array
     {
         return Database::fetchAll(
-            "SELECT m.room_code, m.created_at, q.title as quiz_title, mp.score, 
+            "SELECT m.room_code, m.created_at, COALESCE(q.title, 'Duel Thématique') as quiz_title, mp.score, 
              (SELECT COUNT(*) FROM match_players WHERE match_id = m.id) as total_players,
              (SELECT username FROM users WHERE id = (
                  SELECT user_id FROM match_players WHERE match_id = m.id ORDER BY score DESC LIMIT 1
              )) as winner_name
              FROM match_players mp
              JOIN matches m ON mp.match_id = m.id
-             JOIN quizzes q ON m.quiz_id = q.id
+             LEFT JOIN quizzes q ON m.quiz_id = q.id
              WHERE mp.user_id = ? AND m.status = 'finished'
              ORDER BY m.created_at DESC LIMIT 10",
             [$id]
