@@ -197,7 +197,7 @@ if (!function_exists('getCategoryColorClasses')) {
                 $colors = getCategoryColorClasses($cat['slug']);
                 $quizCount = \App\Models\Category::getQuizCount((int)$cat['id']);
             ?>
-                <div x-show="searchQuery === '' || String(<?php echo json_encode(strtolower($cat['name'])); ?>).includes(searchQuery.toLowerCase())"
+                <div x-show="searchQuery === '' || String('<?php echo addslashes(strtolower($cat['name'])); ?>').includes(searchQuery.toLowerCase())"
                      class="glass-card rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-200/80 dark:border-slate-800/40 <?php echo $colors['border']; ?> transition-all duration-300 flex flex-col justify-between group">
                     <div class="space-y-4">
                         <div class="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 <?php echo $colors['iconBg']; ?>">

@@ -61,7 +61,9 @@ class MailerService
         $mail = new PHPMailer(true);
 
         try {
-            // Server settings
+            // Server & Encoding settings
+            $mail->CharSet = 'UTF-8';
+            $mail->Encoding = 'base64';
             $mail->isSMTP();
             $mail->Host = $this->host;
             $mail->SMTPAuth = true;
