@@ -30,8 +30,9 @@
         <div class="p-3 sm:p-4 bg-slate-100 dark:bg-slate-800/40 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Lien d'invitation</h4>
             <p class="text-xs sm:text-sm font-mono font-semibold break-all select-all" x-text="getInvitationLink()"></p>
-            <button @click="copyInvitationLink()" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold shadow transition-all">
-                📋 Copier le lien
+            <button @click="copyInvitationLink()" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold shadow transition-all flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
+                <span>Copier le lien</span>
             </button>
         </div>
 
@@ -57,8 +58,19 @@
             <p class="text-xs text-slate-400 text-center">La sélection des thèmes démarre dès que tous les joueurs (min. 2) sont prêts.</p>
             <button @click="markAsReady()" :disabled="isMeReady"
                     :class="isMeReady ? 'bg-emerald-600 text-white cursor-default' : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg'"
-                    class="w-full px-6 py-3.5 font-bold rounded-xl transition-all text-sm">
-                <span x-text="isMeReady ? '✓ Prêt — en attente des adversaires' : '⚔️ Signaler prêt'"></span>
+                    class="w-full px-6 py-3.5 font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+                <template x-if="isMeReady">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        <span>Prêt — en attente des adversaires</span>
+                    </span>
+                </template>
+                <template x-if="!isMeReady">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                        <span>Signaler prêt</span>
+                    </span>
+                </template>
             </button>
         </div>
     </div>
@@ -569,7 +581,7 @@ function duelArena() {
         },
 
         getInvitationLink() {
-            return 'http://' + window.location.host + '/duel/' + this.roomCode;
+            return window.location.origin + '/duel/' + this.roomCode;
         },
 
         copyInvitationLink() {
