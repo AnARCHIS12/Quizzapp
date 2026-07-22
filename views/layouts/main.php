@@ -194,7 +194,7 @@
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open" class="flex items-center space-x-2 focus:outline-none">
                                 <img class="w-8 h-8 rounded-full border border-violet-500" 
-                                     src="<?php echo $_SESSION['user']['avatar_url'] ?: 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($_SESSION['user']['username']); ?>" 
+                                     src="<?php echo (!empty($_SESSION['user']['avatar_url']) && (str_starts_with($_SESSION['user']['avatar_url'], '/') || str_starts_with($_SESSION['user']['avatar_url'], 'http'))) ? $_SESSION['user']['avatar_url'] : 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($_SESSION['user']['username']); ?>" 
                                      alt="Avatar">
                                 <span class="hidden sm:inline-block text-sm font-semibold hover:text-brand-500 transition-colors"><?php echo \App\Core\View::escape($_SESSION['user']['username']); ?></span>
                             </button>

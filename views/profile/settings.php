@@ -10,7 +10,7 @@
         <div class="space-y-6">
             <div class="glass-card rounded-2xl p-6 shadow-md text-center">
                 <img class="w-24 h-24 rounded-full border-4 border-violet-500 mx-auto mb-4 object-cover" 
-                     src="<?php echo $user['avatar_url'] ?: 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($user['username']); ?>" 
+                     src="<?php echo (!empty($user['avatar_url']) && (str_starts_with($user['avatar_url'], '/') || str_starts_with($user['avatar_url'], 'http'))) ? $user['avatar_url'] : 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($user['username']); ?>" 
                      alt="Avatar">
                 <h3 class="text-lg font-bold"><?php echo \App\Core\View::escape($user['username']); ?></h3>
                 <p class="text-xs text-slate-400 mt-1"><?php echo \App\Core\View::escape($user['email']); ?></p>

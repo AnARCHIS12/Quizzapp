@@ -5,7 +5,7 @@
             <!-- Avatar Frame -->
             <div class="relative">
                 <img class="w-24 h-24 rounded-full border-4 border-violet-500 shadow-lg object-cover" 
-                     src="<?php echo $user['avatar_url'] ?: 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($user['username']); ?>" 
+                     src="<?php echo (!empty($user['avatar_url']) && (str_starts_with($user['avatar_url'], '/') || str_starts_with($user['avatar_url'], 'http'))) ? $user['avatar_url'] : 'https://api.dicebear.com/7.x/bottts/svg?seed=' . urlencode($user['username']); ?>" 
                      alt="Avatar">
                 <span class="absolute bottom-0 right-0 px-2 py-0.5 text-xs font-extrabold bg-violet-600 text-white rounded-full border border-slate-900">LVL <?php echo (int)($stats['level'] ?? 1); ?></span>
             </div>
