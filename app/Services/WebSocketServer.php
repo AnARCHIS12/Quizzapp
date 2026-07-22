@@ -503,7 +503,7 @@ class WebSocketServer implements MessageComponentInterface
     }
 
     /**
-     * Launch async background PHP process to generate fresh AI questions for all categories.
+     * Launch async background PHP process to generate fresh AI questions for ALL categories.
      * Non-blocking: uses proc_open with STDIN/STDOUT/STDERR redirected to /dev/null.
      * Falls back silently if MISTRAL_API_KEY is not set.
      */
@@ -514,8 +514,8 @@ class WebSocketServer implements MessageComponentInterface
             return; // No key configured — skip silently
         }
 
-        // Get all category IDs to pre-generate questions for
-        $categories = Database::fetchAll("SELECT id FROM categories ORDER BY RAND() LIMIT 10");
+        // Get ALL category IDs so fresh questions are ready for ANY theme the players pick
+        $categories = Database::fetchAll("SELECT id FROM categories");
         $catIds = array_column($categories, 'id');
         if (empty($catIds)) return;
 

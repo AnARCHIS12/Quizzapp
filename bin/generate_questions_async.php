@@ -3,6 +3,7 @@
  * Async AI Question Generator
  * Called in background (proc_open / non-blocking) when a new duel room is ready.
  * Generates 5 fresh questions per category using Mistral AI and stores them in DB.
+ * Questions are strictly scoped to the exact category + its parent context.
  *
  * Usage: php bin/generate_questions_async.php <category_id1> <category_id2> ...
  */
@@ -27,11 +28,10 @@ if (file_exists($envFile)) {
     }
 }
 
-$mistralKey = $_ENV['MISTRAL_API_KEY'] ?? getenv('MISTRAL_API_KEY') ?? '';
-$mistralModel = $_ENV['MISTRAL_MODEL'] ?? getenv('MISTRAL_MODEL') ?? 'mistral-small-latest';
+$mistralKey   = $_ENV['MISTRAL_API_KEY'] ?? getenv('MISTRAL_API_KEY') ?? '';
+$mistralModel = $_ENV['MISTRAL_MODEL']   ?? getenv('MISTRAL_MODEL')   ?? 'mistral-small-latest';
 
 if (empty($mistralKey)) {
-    // No API key — silently exit, DB questions will be used
     exit(0);
 }
 
@@ -60,13 +60,18 @@ try {
 }
 
 foreach ($categoryIds as $catId) {
-    // Get category name
-    $stmt = $pdo->prepare("SELECT id, name FROM categories WHERE id = ?");
+    // Get category with its parent name for precise context
+    $stmt = $pdo->prepare(
+        "SELECT c.id, c.name, c.description, p.name AS parent_name
+         FROM categories c
+         LEFT JOIN categories p ON c.parent_id = p.id
+         WHERE c.id = ?"
+    );
     $stmt->execute([$catId]);
     $category = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$category) continue;
 
-    // Get or create a quiz for this category
+    // Get quiz for this category
     $stmt = $pdo->prepare("SELECT id FROM quizzes WHERE category_id = ? LIMIT 1");
     $stmt->execute([$catId]);
     $quiz = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -74,33 +79,51 @@ foreach ($categoryIds as $catId) {
     $quizId = (int)$quiz['id'];
 
     $categoryName = $category['name'];
+    $parentName   = $category['parent_name'] ?? null;
+    $description  = $category['description'] ?? '';
 
-    // Ask Mistral to generate 5 unique questions for this category
-    $prompt = "Tu es un expert en quiz éducatif. Génère exactement 5 questions de quiz uniques et inédites sur le thème : \"{$categoryName}\".
+    // Build a precise themed context for Mistral
+    if ($parentName) {
+        $themeContext = "la sous-catégorie \"{$categoryName}\" (qui appartient à la catégorie parente \"{$parentName}\")";
+        $scopeWarning = "IMPORTANT : Toutes les questions doivent porter EXCLUSIVEMENT sur \"{$categoryName}\", pas sur d'autres thèmes de \"{$parentName}\".";
+    } else {
+        $themeContext = "la catégorie \"{$categoryName}\"";
+        $scopeWarning = "IMPORTANT : Toutes les questions doivent porter EXCLUSIVEMENT sur \"{$categoryName}\".";
+    }
 
-Pour chaque question, retourne un objet JSON avec ce format exact :
+    if (!empty($description)) {
+        $themeContext .= " (description : {$description})";
+    }
+
+    // Prompt with strict category scoping
+    $prompt = "Tu es un expert en quiz éducatif francophone. Génère exactement 5 questions de quiz uniques et inédites sur {$themeContext}.
+
+{$scopeWarning}
+
+Pour chaque question, utilise ce format JSON exact :
 {
-  \"question\": \"Texte de la question ?\",
+  \"question\": \"Texte précis de la question ?\",
   \"type\": \"qcm\",
   \"points\": 10,
-  \"explanation\": \"Brève explication de la bonne réponse.\",
+  \"explanation\": \"Courte explication factuelle de la bonne réponse.\",
   \"answers\": [
-    {\"text\": \"Réponse A\", \"correct\": true},
-    {\"text\": \"Réponse B\", \"correct\": false},
-    {\"text\": \"Réponse C\", \"correct\": false},
-    {\"text\": \"Réponse D\", \"correct\": false}
+    {\"text\": \"Réponse correcte\", \"correct\": true},
+    {\"text\": \"Mauvaise réponse 1\", \"correct\": false},
+    {\"text\": \"Mauvaise réponse 2\", \"correct\": false},
+    {\"text\": \"Mauvaise réponse 3\", \"correct\": false}
   ]
 }
 
-Retourne uniquement un tableau JSON valide de 5 objets. Pas de texte avant ou après. Les questions doivent être variées, précises et éducatives. Évite les doublons avec des questions trop génériques.";
+Retourne UNIQUEMENT un tableau JSON valide de 5 objets, sans texte avant ou après.
+Les questions doivent être variées, précises, éducatives et difficiles. Évite les questions trop génériques ou déjà vues.";
 
     $payload = json_encode([
-        'model' => $mistralModel,
+        'model'    => $mistralModel,
         'messages' => [
             ['role' => 'user', 'content' => $prompt]
         ],
-        'temperature' => 0.9,
-        'max_tokens' => 2000,
+        'temperature'     => 0.85,
+        'max_tokens'      => 2000,
         'response_format' => ['type' => 'json_object']
     ]);
 
@@ -126,15 +149,13 @@ Retourne uniquement un tableau JSON valide de 5 objets. Pas de texte avant ou ap
     $content = $decoded['choices'][0]['message']['content'] ?? '';
     if (empty($content)) continue;
 
-    // Try to parse as array or wrapped object
+    // Parse JSON — handle array or wrapped object
     $questions = json_decode($content, true);
     if (json_last_error() !== JSON_ERROR_NONE) continue;
 
-    // Handle wrapped object (e.g. {"questions": [...]})
     if (isset($questions['questions'])) {
         $questions = $questions['questions'];
     } elseif (!isset($questions[0])) {
-        // Single question wrapped in object
         $questions = [$questions];
     }
 
@@ -148,7 +169,7 @@ Retourne uniquement un tableau JSON valide de 5 objets. Pas de texte avant ou ap
 
         if (empty($questionText) || count($answers) < 2) continue;
 
-        // Check for duplicate question text in this quiz
+        // Skip duplicates
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM questions WHERE quiz_id = ? AND question_text = ?");
         $stmt->execute([$quizId, $questionText]);
         if ((int)$stmt->fetchColumn() > 0) continue;
@@ -168,7 +189,7 @@ Retourne uniquement un tableau JSON valide de 5 objets. Pas de texte avant ou ap
         );
         foreach ($answers as $ans) {
             $ansText   = trim($ans['text'] ?? '');
-            $isCorrect = $ans['correct'] ? 1 : 0;
+            $isCorrect = ($ans['correct'] ?? false) ? 1 : 0;
             if (!empty($ansText)) {
                 $stmtAns->execute([$questionId, $ansText, $isCorrect]);
             }
