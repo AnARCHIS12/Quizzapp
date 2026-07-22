@@ -666,11 +666,14 @@ class WebSocketServer implements MessageComponentInterface
                         "SELECT DISTINCT q.* FROM questions q
                          JOIN quizzes quiz ON q.quiz_id = quiz.id
                          JOIN categories c ON quiz.category_id = c.id
-                         WHERE (c.id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
-                             OR c.parent_id = (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)) {$notInClause}
+                         WHERE (
+                            c.id IN (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                            OR c.parent_id IN (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                            OR c.parent_id = ?
+                         ) {$notInClause}
                          ORDER BY RAND()
                          LIMIT 3",
-                        [$key, $key]
+                        [$key, $key, $key]
                     );
                     foreach ($extraRows as $er) {
                         if (count($rows) >= 3) break;
@@ -680,16 +683,20 @@ class WebSocketServer implements MessageComponentInterface
                     }
                 }
 
-                // 3. If still not enough, reuse questions from this SAME category (allow repeats across rounds if necessary)
+                // 3. If still not enough, reuse questions from this SAME category family (ignore seen/history)
                 if (count($rows) < 3) {
                     $repeatRows = Database::fetchAll(
                         "SELECT DISTINCT q.* FROM questions q
                          JOIN quizzes quiz ON q.quiz_id = quiz.id
                          JOIN categories c ON quiz.category_id = c.id
-                         WHERE c.id = ? OR c.parent_id = ?
+                         WHERE (
+                            c.id = ? OR c.parent_id = ?
+                            OR c.id IN (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                            OR c.parent_id IN (SELECT parent_id FROM categories WHERE id = ? AND parent_id IS NOT NULL)
+                         )
                          ORDER BY RAND()
                          LIMIT 3",
-                        [$key, $key]
+                        [$key, $key, $key, $key]
                     );
                     foreach ($repeatRows as $rr) {
                         if (count($rows) >= 3) break;
@@ -714,6 +721,17 @@ class WebSocketServer implements MessageComponentInterface
                     $q['answers'] = array_values($unique);
                     $allQuestions[] = $q;
                     $seen[] = $q['id'];
+                }
+            }
+        }
+
+        // Guarantee exactly 18 questions, strictly padded using only the chosen category questions
+        if (!empty($allQuestions) && count($allQuestions) < 18) {
+            $pool = $allQuestions;
+            while (count($allQuestions) < 18) {
+                foreach ($pool as $pq) {
+                    $allQuestions[] = $pq;
+                    if (count($allQuestions) >= 18) break;
                 }
             }
         }
