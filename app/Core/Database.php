@@ -13,6 +13,10 @@ use Exception;
  */
 class Database
 {
+    private const BULK_QUIZ_ID_MIN     = 1000;
+    private const BULK_QUESTION_ID_MIN = 10000;
+    private const BULK_SEED_HASH_KEY   = 'bulk_seed_hash';
+
     private static ?PDO $pdo = null;
 
     /**
@@ -96,6 +100,8 @@ class Database
             $stmtQ = $pdo->query("SELECT COUNT(*) FROM questions");
             $qCount = $stmtQ ? (int)$stmtQ->fetchColumn() : 0;
 
+            self::ensureSettingsTable($pdo);
+
             $baseDir = dirname(__DIR__, 2);
             $migrationFile = $baseDir . '/database/migration.sql';
             $seedFile = $baseDir . '/database/seed.sql';
@@ -111,6 +117,7 @@ class Database
 
                 if (file_exists($seedBulkFile)) {
                     $pdo->exec(file_get_contents($seedBulkFile));
+                    self::storeBulkSeedHash($pdo, $seedBulkFile);
                 }
 
                 // Ensure status ENUM includes 'selecting'
@@ -123,14 +130,93 @@ class Database
                     $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
                     $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
                 } catch (Exception $e) {}
-            } elseif ($qCount < 1000 && file_exists($seedBulkFile)) {
-                // Base existante : ajouter uniquement le bulk (INSERT IGNORE, sans toucher aux users/scores).
-                $pdo->exec("SET NAMES utf8mb4");
-                $pdo->exec(file_get_contents($seedBulkFile));
+            } elseif (file_exists($seedBulkFile)) {
+                self::syncBulkSeed($pdo, $seedBulkFile);
             }
         } catch (Exception $e) {
             error_log("Auto database seeding attempt: " . $e->getMessage());
         }
+    }
+
+    private static function ensureSettingsTable(PDO $pdo): void
+    {
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `settings` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `setting_key` VARCHAR(100) NOT NULL UNIQUE,
+                `setting_value` TEXT DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } catch (Exception $e) {}
+    }
+
+    private static function getSetting(PDO $pdo, string $key): ?string
+    {
+        try {
+            $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+            $stmt->execute([$key]);
+            $value = $stmt->fetchColumn();
+
+            return $value === false ? null : (string)$value;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    private static function setSetting(PDO $pdo, string $key, string $value): void
+    {
+        $pdo->prepare(
+            'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+        )->execute([$key, $value]);
+    }
+
+    private static function storeBulkSeedHash(PDO $pdo, string $seedBulkFile): void
+    {
+        $hash = hash_file('sha256', $seedBulkFile);
+        if ($hash !== false) {
+            self::setSetting($pdo, self::BULK_SEED_HASH_KEY, $hash);
+        }
+    }
+
+    private static function purgeGeneratedBulkSeed(PDO $pdo): void
+    {
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        $pdo->exec('DELETE FROM answers WHERE question_id >= ' . self::BULK_QUESTION_ID_MIN);
+        $pdo->exec('DELETE FROM user_question_history WHERE question_id >= ' . self::BULK_QUESTION_ID_MIN);
+        $pdo->exec('DELETE FROM questions WHERE id >= ' . self::BULK_QUESTION_ID_MIN);
+        $pdo->exec('DELETE FROM quizzes WHERE id >= ' . self::BULK_QUIZ_ID_MIN);
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+    }
+
+    /**
+     * Importe ou remplace automatiquement seed_bulk.sql quand le fichier change (mise à jour app).
+     */
+    private static function syncBulkSeed(PDO $pdo, string $seedBulkFile): void
+    {
+        $hash = hash_file('sha256', $seedBulkFile);
+        if ($hash === false) {
+            return;
+        }
+
+        $storedHash = self::getSetting($pdo, self::BULK_SEED_HASH_KEY);
+        if ($storedHash === $hash) {
+            return;
+        }
+
+        $pdo->exec('SET NAMES utf8mb4');
+
+        if ($storedHash !== null) {
+            self::purgeGeneratedBulkSeed($pdo);
+        } else {
+            $stmt = $pdo->query('SELECT COUNT(*) FROM quizzes WHERE id >= ' . self::BULK_QUIZ_ID_MIN);
+            $existingBulk = $stmt ? (int)$stmt->fetchColumn() : 0;
+            if ($existingBulk > 0) {
+                self::purgeGeneratedBulkSeed($pdo);
+            }
+        }
+
+        $pdo->exec(file_get_contents($seedBulkFile));
+        self::setSetting($pdo, self::BULK_SEED_HASH_KEY, $hash);
     }
 
     /**

@@ -1,6 +1,10 @@
 #!/bin/bash
 # Importe database/seed_bulk.sql dans une base EXISTANTE sans recréer le volume Docker.
 #
+# Note : à chaque démarrage de l'app, Database.php resynchronise automatiquement
+# seed_bulk.sql si le fichier a changé (hash SHA-256). Ce script reste utile
+# pour forcer un import immédiat sans attendre une requête HTTP.
+#
 # Usage:
 #   bash bin/import-bulk-seed.sh            # ajoute les quiz manquants (INSERT IGNORE)
 #   bash bin/import-bulk-seed.sh --replace  # remplace les quiz générés (id >= 1000) puis réimporte
@@ -72,6 +76,11 @@ if [ "$REPLACE" = true ]; then
 fi
 
 docker exec -i "$DB_CONTAINER" mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$SEED_FILE"
+
+HASH=$(sha256sum "$SEED_FILE" | awk '{print $1}')
+docker exec "$DB_CONTAINER" mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e \
+    "INSERT INTO settings (setting_key, setting_value) VALUES ('bulk_seed_hash', '$HASH')
+     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);"
 
 echo "Après import :"
 echo "  Quiz       : $(count_query 'SELECT COUNT(*) FROM quizzes')"
