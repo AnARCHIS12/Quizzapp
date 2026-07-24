@@ -96,12 +96,13 @@ class Database
             $stmtQ = $pdo->query("SELECT COUNT(*) FROM questions");
             $qCount = $stmtQ ? (int)$stmtQ->fetchColumn() : 0;
 
-            $needsSeeding = ($catCount < 21) || ($qCount < 100) || !$validAdmin;
+            $needsSeeding = ($catCount < 21) || ($qCount < 1000) || !$validAdmin;
 
             if ($needsSeeding) {
                 $baseDir = dirname(__DIR__, 2);
                 $migrationFile = $baseDir . '/database/migration.sql';
                 $seedFile = $baseDir . '/database/seed.sql';
+                $seedBulkFile = $baseDir . '/database/seed_bulk.sql';
 
                 if (file_exists($migrationFile) && file_exists($seedFile)) {
                     $pdo->exec("SET NAMES utf8mb4");
@@ -110,6 +111,10 @@ class Database
 
                     $pdo->exec($migrationSql);
                     $pdo->exec($seedSql);
+
+                    if (file_exists($seedBulkFile)) {
+                        $pdo->exec(file_get_contents($seedBulkFile));
+                    }
 
                     // Ensure status ENUM includes 'selecting'
                     try {

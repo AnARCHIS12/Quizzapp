@@ -15,6 +15,7 @@ services:
       - db_data:/var/lib/mysql
       - ./database/migration.sql:/docker-entrypoint-initdb.d/01_migration.sql
       - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+      - ./database/seed_bulk.sql:/docker-entrypoint-initdb.d/03_seed_bulk.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
