@@ -11,6 +11,7 @@ use App\Models\Quiz;
 use App\Models\Question;
 use App\Models\User;
 use App\Core\Database;
+use App\Services\QuestionSelectionService;
 
 /**
  * Controller managing landing page, quiz selectors, single-player session flow, and grading
@@ -81,6 +82,8 @@ class QuizController
 
         if (empty($questions)) {
             $questions = Question::getByQuiz($id);
+            $questions = QuestionSelectionService::deduplicateByText($questions);
+            shuffle($questions);
         }
 
         if (empty($questions)) {
@@ -92,8 +95,6 @@ class QuizController
         Session::start();
         $userId = Session::get('user')['id'] ?? null;
         $isFavorited = $userId ? Quiz::isFavorited($userId, $id) : false;
-
-        // Shuffle questions or answers for fresh experience, keeping ranking and association intact
         // Format for JSON/JavaScript playing
         $formattedQuestions = [];
         foreach ($questions as $q) {
@@ -165,16 +166,9 @@ class QuizController
 
         // Fallback to random DB questions from this category if any exist
         if (empty($questions)) {
-            $questions = Database::fetchAll(
-                "SELECT q.* FROM questions q 
-                 JOIN quizzes quiz ON q.quiz_id = quiz.id 
-                 WHERE quiz.category_id = ? 
-                 ORDER BY RAND() LIMIT 10", 
-                [$id]
-            );
-            foreach ($questions as &$q) {
-                $q['answers'] = Database::fetchAll("SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?", [$q['id']]);
-            }
+            Session::start();
+            $userId = Session::get('user')['id'] ?? null;
+            $questions = QuestionSelectionService::pickRandomForCategory($id, $userId ? (int)$userId : null, 10);
         }
 
         if (empty($questions)) {
@@ -254,6 +248,7 @@ class QuizController
         $correctCount = (int)($input['correct_count'] ?? 0);
         $totalQuestions = (int)($input['total_questions'] ?? 0);
         $timeSpent = (float)($input['time_spent'] ?? 0.0);
+        $questionIds = array_values(array_filter(array_map('intval', $input['question_ids'] ?? [])));
 
         $xpReward = 15;
         $quizTitle = "Quiz Dynamique";
@@ -298,6 +293,10 @@ class QuizController
 
             // Log completion
             Session::logAction($userId, "Quiz complété: {$quizTitle} (Score: {$score}, XP gagnés: {$xpEarned})");
+
+            if ($questionIds !== []) {
+                QuestionSelectionService::recordPlayedQuestions($userId, $questionIds);
+            }
 
             // Evaluate achievements
             $this->checkAchievements($userId, $newLevel, $newPlayed, $correctCount, $totalQuestions);

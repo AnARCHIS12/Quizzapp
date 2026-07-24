@@ -233,19 +233,16 @@ class WebSocketServer implements MessageComponentInterface
             if ($quizId) {
                 $questions = Database::fetchAll("SELECT * FROM questions WHERE quiz_id = ? ORDER BY sorting_order ASC", [$quizId]);
             } else {
-                $questions = Database::fetchAll("SELECT * FROM questions ORDER BY RAND() LIMIT 10");
-            }
-            foreach ($questions as &$q) {
-                $rawAnswers = Database::fetchAll("SELECT id, answer_text, is_correct, match_order, association_pair FROM answers WHERE question_id = ?", [$q['id']]);
-                $unique = [];
-                foreach ($rawAnswers as $ans) {
-                    $k = trim((string)$ans['answer_text']);
-                    if (!isset($unique[$k])) {
-                        $unique[$k] = $ans;
-                    }
+                try {
+                    $questions = Database::fetchAll(
+                        "SELECT * FROM questions WHERE match_room_code = ? ORDER BY id ASC",
+                        [$code]
+                    );
+                } catch (Exception $e) {
+                    $questions = [];
                 }
-                $q['answers'] = array_values($unique);
             }
+            $questions = QuestionSelectionService::attachAnswers($questions);
 
             $this->rooms[$code] = [
                 'quiz_id' => $quizId,
@@ -500,12 +497,20 @@ class WebSocketServer implements MessageComponentInterface
                     // Priority 1: Load 100% brand new AI-generated questions for this exact room
                     $questions = $this->loadFreshAIQuestionsForRoom($code);
 
-                    // Priority 2: Fallback to DB pool if AI generation was unavailable
                     if (empty($questions)) {
                         $pickedCats = $this->rooms[$code]['picked_categories_snapshot'] ?? $this->rooms[$code]['picked_categories'];
                         $playerUids = $this->rooms[$code]['player_user_ids_snapshot']   ?? [];
                         $questions  = $this->loadQuestionsFromCategoryPicks($pickedCats, $playerUids);
+                    } else {
+                        $pickedCats = $this->rooms[$code]['picked_categories_snapshot'] ?? $this->rooms[$code]['picked_categories'];
+                        $playerUids = $this->rooms[$code]['player_user_ids_snapshot']   ?? [];
+                        if (count($questions) < 18) {
+                            $dbQuestions = $this->loadQuestionsFromCategoryPicks($pickedCats, $playerUids);
+                            $questions = QuestionSelectionService::deduplicateByText(array_merge($questions, $dbQuestions));
+                        }
                     }
+
+                    $questions = QuestionSelectionService::deduplicateByText($questions);
 
                     if (empty($questions)) return;
                     shuffle($questions);

@@ -4,7 +4,8 @@
  *
  * Usage:
  *   php bin/generate_bulk_seed.php
- *   php bin/generate_bulk_seed.php --verify   # affiche les comptes attendus sans écrire le fichier
+ *   php bin/generate_bulk_seed.php --verify            # affiche les comptes attendus sans écrire le fichier
+ *   php bin/generate_bulk_seed.php --check-uniqueness  # vérifie l'unicité des textes par catégorie
  *
  * Paramètres (constants ci-dessous) :
  *   - 100 nouveaux quiz par catégorie (en plus des quiz existants dans seed.sql)
@@ -18,10 +19,12 @@ const QUESTIONS_PER_QUIZ   = 10;
 const QUIZ_ID_START        = 1000;
 const QUESTION_ID_START    = 10000;
 const BATCH_SIZE           = 200;
+const TEMPLATE_COUNT       = 40;
 
 $baseDir    = dirname(__DIR__);
 $outputPath = $baseDir . '/database/seed_bulk.sql';
 $verifyOnly = in_array('--verify', $argv ?? [], true);
+$checkUniqueness = in_array('--check-uniqueness', $argv ?? [], true);
 
 /** @var array<int, array{name: string, themes: string[], facts: string[][]}> */
 $categories = [
@@ -184,50 +187,203 @@ function pick(array $items, int $index): mixed
     return $items[$index % count($items)];
 }
 
+/** @return array{0: int, 1: int, 2: int} */
+function decodeQuestionIndex(int $globalIdx, int $themeCount, int $factCount): array
+{
+    $templateIdx = $globalIdx % TEMPLATE_COUNT;
+    $factIdx     = intdiv($globalIdx, TEMPLATE_COUNT) % $factCount;
+    $themeIdx    = intdiv($globalIdx, TEMPLATE_COUNT * $factCount) % $themeCount;
+
+    return [$themeIdx, $factIdx, $templateIdx];
+}
+
+/** @return array<int, array{text: string, correct: bool}> */
+function buildMcqAnswers(array $facts, int $seed, string $correctText, int $wrongOffset = 1): array
+{
+    $correctIdx = $seed % 4;
+    $answers    = [];
+
+    for ($i = 0; $i < 4; $i++) {
+        if ($i === $correctIdx) {
+            $answers[] = ['text' => $correctText, 'correct' => true];
+        } else {
+            $otherFact = pick($facts, $seed + $i + $wrongOffset);
+            $answers[] = ['text' => $otherFact[$wrongOffset === 1 ? 0 : 1], 'correct' => false];
+        }
+    }
+
+    return $answers;
+}
+
 /**
  * @return array{type: string, text: string, explanation: string, answers: array<int, array{text: string, correct: bool}>}
  */
 function buildQuestion(int $catId, array $category, int $quizIndex, int $questionIndex): array
 {
-    $name   = $category['name'];
-    $theme  = pick($category['themes'], $quizIndex + $questionIndex);
-    $fact   = pick($category['facts'], $quizIndex * 3 + $questionIndex);
+    $name      = $category['name'];
+    $themes    = $category['themes'];
+    $facts     = $category['facts'];
+    $globalIdx = ($quizIndex * QUESTIONS_PER_QUIZ) + $questionIndex;
+    [$themeIdx, $factIdx, $templateIdx] = decodeQuestionIndex(
+        $globalIdx,
+        count($themes),
+        count($facts)
+    );
+
+    $theme  = $themes[$themeIdx];
+    $fact   = $facts[$factIdx];
     $term   = $fact[0];
     $detail = $fact[1];
-    $seed   = ($catId * 10000) + ($quizIndex * 10) + $questionIndex;
+    $seed   = ($catId * 100000) + $globalIdx;
+    $level  = $quizIndex + 1;
+    $num    = $questionIndex + 1;
 
-    if ($questionIndex % 5 === 4) {
-        $isTrue = ($seed % 2) === 0;
+    $wrongFact = $facts[($factIdx + 1 + ($templateIdx % max(1, count($facts) - 1))) % count($facts)];
+
+    $mcqTermTexts = [
+        "[{$theme}] {$name} — série {$level}, item {$num} : quel terme correspond à « {$detail} » ?",
+        "[{$theme}] En {$name}, quelle réponse désigne « {$detail} » ? (niveau {$level}, Q{$num})",
+        "[{$theme}] {$name} : identifiez l'élément lié à « {$detail} » (quiz {$level}-{$num})",
+        "[{$theme}] Lequel de ces choix renvoie à « {$detail} » en {$name} ? ({$level}/{$num})",
+        "[{$theme}] Sélectionnez le terme associé à « {$detail} » — {$name}, épreuve {$level}.{$num}",
+        "[{$theme}] {$name}, thème {$theme} : trouvez le terme pour « {$detail} » (Q{$num})",
+        "[{$theme}] Question {$num} du parcours {$level} en {$name} : « {$detail} » désigne ?",
+        "[{$theme}] Associez « {$detail} » au bon terme en {$name} (série {$level}, n°{$num})",
+        "[{$theme}] En {$name}, « {$detail} » est la description de quel terme ? ({$level}-{$num})",
+        "[{$theme}] {$name} — repère {$level}.{$num} : quel mot correspond à « {$detail} » ?",
+        "[{$theme}] Choix multiple {$name} (niveau {$level}, question {$num}) : « {$detail} » ?",
+        "[{$theme}] {$name} / {$theme} : le terme correct pour « {$detail} » ? ({$num}/10, quiz {$level})",
+        "[{$theme}] Repérez le terme de « {$detail} » en {$name} — progression {$level}-{$num}",
+        "[{$theme}] {$name}, module {$level} : quelle option décrit « {$detail} » par son nom ?",
+        "[{$theme}] En {$name}, item {$num} du set {$level} : terme pour « {$detail} » ?",
+        "[{$theme}] {$name} — énigme {$level}.{$num} : quel terme illustre « {$detail} » ?",
+        "[{$theme}] Thème « {$theme} », {$name}, palier {$level} : « {$detail} » = ?",
+        "[{$theme}] {$name} (quiz {$level}, Q{$num}) : nommez l'élément « {$detail} »",
+        "[{$theme}] Trouvez la bonne étiquette pour « {$detail} » — {$name}, volet {$level}-{$num}",
+        "[{$theme}] {$name}, chapitre {$level}, question {$num} : terme lié à « {$detail} » ?",
+    ];
+
+    $mcqDetailTexts = [
+        "[{$theme}] {$name} — série {$level}, item {$num} : que signifie « {$term} » ?",
+        "[{$theme}] En {$name}, quelle description correspond à « {$term} » ? (niveau {$level}, Q{$num})",
+        "[{$theme}] {$name} : choisissez la bonne définition de « {$term} » (quiz {$level}-{$num})",
+        "[{$theme}] Quelle affirmation décrit « {$term} » en {$name} ? ({$level}/{$num})",
+        "[{$theme}] À quoi renvoie « {$term} » dans {$name} ? — épreuve {$level}.{$num}",
+        "[{$theme}] {$name}, thème {$theme} : définition correcte de « {$term} » (Q{$num})",
+        "[{$theme}] Question {$num} du parcours {$level} en {$name} : sens de « {$term} » ?",
+        "[{$theme}] En {$name}, « {$term} » se définit comment ? (série {$level}, n°{$num})",
+        "[{$theme}] {$name} — repère {$level}.{$num} : quelle phrase décrit « {$term} » ?",
+        "[{$theme}] Choix multiple {$name} (niveau {$level}, question {$num}) : « {$term} » ?",
+    ];
+
+    $trueFalseTrueTexts = [
+        "[{$theme}] {$name} — série {$level}, item {$num} : « {$term} » ↔ « {$detail} » ?",
+        "[{$theme}] Vrai ou faux ({$name}, quiz {$level}-{$num}) : « {$term} » est lié à « {$detail} ».",
+        "[{$theme}] En {$name}, l'association « {$term} » / « {$detail} » est-elle correcte ? (Q{$num})",
+        "[{$theme}] Affirmation (niveau {$level}, item {$num}) en {$name} : « {$term} » = « {$detail} ».",
+        "[{$theme}] {$name}, thème {$theme}, palier {$level}.{$num} : « {$term} » décrit bien « {$detail} » ?",
+    ];
+
+    $trueFalseFalseTexts = [
+        "[{$theme}] {$name} — série {$level}, item {$num} : « {$term} » ↔ « {$wrongFact[1]} » ?",
+        "[{$theme}] Vrai ou faux ({$name}, quiz {$level}-{$num}) : « {$term} » est lié à « {$wrongFact[1]} ».",
+        "[{$theme}] En {$name}, « {$term} » désigne-t-il « {$wrongFact[1]} » ? (Q{$num})",
+        "[{$theme}] Affirmation (niveau {$level}, item {$num}) en {$name} : « {$term} » = « {$wrongFact[1]} ».",
+        "[{$theme}] {$name}, thème {$theme}, palier {$level}.{$num} : « {$term} » illustre « {$wrongFact[1]} » ?",
+    ];
+
+    if ($templateIdx < 20) {
+        return [
+            'type'        => 'mcq',
+            'text'        => $mcqTermTexts[$templateIdx],
+            'explanation' => "La bonne réponse est « {$term} » : {$detail}.",
+            'answers'     => buildMcqAnswers($facts, $seed, $term),
+        ];
+    }
+
+    if ($templateIdx < 30) {
+        $detailIdx = $templateIdx - 20;
+
+        return [
+            'type'        => 'mcq',
+            'text'        => $mcqDetailTexts[$detailIdx],
+            'explanation' => "« {$term} » correspond à : {$detail}.",
+            'answers'     => buildMcqAnswers($facts, $seed, $detail, 2),
+        ];
+    }
+
+    if ($templateIdx < 35) {
+        $tfIdx = $templateIdx - 30;
+
         return [
             'type'        => 'true_false',
-            'text'        => "Vrai ou faux : en {$name}, « {$term} » est associé à « {$detail} ».",
-            'explanation' => $isTrue
-                ? "Cette affirmation est correcte : {$term} — {$detail}."
-                : "Cette affirmation est incorrecte dans le contexte de {$name}.",
+            'text'        => $trueFalseTrueTexts[$tfIdx],
+            'explanation' => "Vrai : {$term} — {$detail}.",
             'answers'     => [
-                ['text' => 'Vrai', 'correct' => $isTrue],
-                ['text' => 'Faux', 'correct' => !$isTrue],
+                ['text' => 'Vrai', 'correct' => true],
+                ['text' => 'Faux', 'correct' => false],
             ],
         ];
     }
 
-    $correctIdx = $seed % 4;
-    $answers    = [];
-    for ($i = 0; $i < 4; $i++) {
-        if ($i === $correctIdx) {
-            $answers[] = ['text' => $term, 'correct' => true];
-        } else {
-            $otherFact = pick($category['facts'], $seed + $i + 1);
-            $answers[] = ['text' => $otherFact[0], 'correct' => false];
+    $tfIdx = $templateIdx - 35;
+
+    return [
+        'type'        => 'true_false',
+        'text'        => $trueFalseFalseTexts[$tfIdx],
+        'explanation' => "Faux : « {$term} » correspond à « {$detail} », pas à « {$wrongFact[1]} ».",
+        'answers'     => [
+            ['text' => 'Vrai', 'correct' => false],
+            ['text' => 'Faux', 'correct' => true],
+        ],
+    ];
+}
+
+function checkCategoryUniqueness(array $categories): int
+{
+    $totalDuplicates = 0;
+
+    foreach ($categories as $catId => $category) {
+        $seen = [];
+
+        for ($q = 0; $q < QUIZZES_PER_CATEGORY; $q++) {
+            for ($i = 0; $i < QUESTIONS_PER_QUIZ; $i++) {
+                $text = mb_strtolower(trim(buildQuestion($catId, $category, $q, $i)['text']));
+                if (isset($seen[$text])) {
+                    $totalDuplicates++;
+                } else {
+                    $seen[$text] = true;
+                }
+            }
+        }
+
+        $expected = QUIZZES_PER_CATEGORY * QUESTIONS_PER_QUIZ;
+        $unique   = count($seen);
+        echo sprintf(
+            "  Catégorie %2d (%s) : %d/%d textes uniques\n",
+            $catId,
+            $category['name'],
+            $unique,
+            $expected
+        );
+
+        if ($unique !== $expected) {
+            $totalDuplicates += ($expected - $unique);
         }
     }
 
-    return [
-        'type'        => 'mcq',
-        'text'        => "[{$theme}] Quiz " . ($quizIndex + 1) . " — Quel élément est correctement lié à {$name} ? (variante " . ($questionIndex + 1) . ")",
-        'explanation' => "La bonne réponse est « {$term} » : {$detail}.",
-        'answers'     => $answers,
-    ];
+    return $totalDuplicates;
+}
+
+if ($checkUniqueness) {
+    echo "Vérification d'unicité des questions par catégorie :\n";
+    $duplicates = checkCategoryUniqueness($categories);
+    if ($duplicates > 0) {
+        fwrite(STDERR, "Échec : {$duplicates} doublon(s) détecté(s).\n");
+        exit(1);
+    }
+    echo "OK : 1000 textes uniques par catégorie.\n";
+    exit(0);
 }
 
 if ($verifyOnly) {
@@ -243,9 +399,9 @@ if ($verifyOnly) {
 
 $quizId      = QUIZ_ID_START;
 $questionId  = QUESTION_ID_START;
-$quizRows    = [];
+$quizRows     = [];
 $questionRows = [];
-$answerRows  = [];
+$answerRows   = [];
 
 foreach ($categories as $catId => $category) {
     for ($q = 0; $q < QUIZZES_PER_CATEGORY; $q++) {
@@ -263,6 +419,7 @@ foreach ($categories as $catId => $category) {
 
         for ($i = 0; $i < QUESTIONS_PER_QUIZ; $i++) {
             $question = buildQuestion($catId, $category, $q, $i);
+
             $questionRows[] = sprintf(
                 "(%d, %d, '%s', '%s', 10, '%s', %d)",
                 $questionId,
@@ -314,6 +471,13 @@ $writeBatches($out, '-- Questions générées', $questionRows, '`questions` (`id
 $writeBatches($out, '-- Réponses générées', $answerRows, '`answers` (`question_id`, `answer_text`, `is_correct`)');
 
 fclose($out);
+
+echo "Vérification d'unicité...\n";
+$duplicates = checkCategoryUniqueness($categories);
+if ($duplicates > 0) {
+    fwrite(STDERR, "Échec : {$duplicates} doublon(s) détecté(s). Fichier généré mais invalide.\n");
+    exit(1);
+}
 
 $sizeMb = round(filesize($outputPath) / 1024 / 1024, 2);
 echo "Fichier généré : {$outputPath}\n";

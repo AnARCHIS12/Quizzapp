@@ -1,10 +1,22 @@
 #!/bin/bash
 # Importe database/seed_bulk.sql dans une base EXISTANTE sans recréer le volume Docker.
-# Utilise INSERT IGNORE : vos utilisateurs, scores et matchs ne sont pas supprimés.
+#
+# Usage:
+#   bash bin/import-bulk-seed.sh            # ajoute les quiz manquants (INSERT IGNORE)
+#   bash bin/import-bulk-seed.sh --replace  # remplace les quiz générés (id >= 1000) puis réimporte
+#
+# Vos utilisateurs, scores et matchs ne sont jamais supprimés.
 
 set -e
 
 cd "$(dirname "$0")/.."
+
+REPLACE=false
+for arg in "$@"; do
+    if [ "$arg" = "--replace" ]; then
+        REPLACE=true
+    fi
+done
 
 if [ -f .env ]; then
     set -a
@@ -32,7 +44,11 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$DB_CONTAINER"; then
 fi
 
 echo "Import bulk seed dans '$DB_NAME' (conteneur $DB_CONTAINER)..."
-echo "Aucune suppression de données : INSERT IGNORE uniquement."
+if [ "$REPLACE" = true ]; then
+    echo "Mode --replace : suppression des quiz générés (id >= 1000) avant réimport."
+else
+    echo "Mode ajout : INSERT IGNORE uniquement (quiz déjà importés conservés tels quels)."
+fi
 echo ""
 
 count_query() {
@@ -43,6 +59,17 @@ echo "Avant import :"
 echo "  Quiz       : $(count_query 'SELECT COUNT(*) FROM quizzes')"
 echo "  Questions  : $(count_query 'SELECT COUNT(*) FROM questions')"
 echo ""
+
+if [ "$REPLACE" = true ]; then
+    docker exec "$DB_CONTAINER" mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "
+        SET FOREIGN_KEY_CHECKS = 0;
+        DELETE FROM answers WHERE question_id >= 10000;
+        DELETE FROM user_question_history WHERE question_id >= 10000;
+        DELETE FROM questions WHERE id >= 10000;
+        DELETE FROM quizzes WHERE id >= 1000;
+        SET FOREIGN_KEY_CHECKS = 1;
+    "
+fi
 
 docker exec -i "$DB_CONTAINER" mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$SEED_FILE"
 
