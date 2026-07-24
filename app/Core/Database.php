@@ -16,6 +16,8 @@ class Database
     private const BULK_QUIZ_ID_MIN     = 1000;
     private const BULK_QUESTION_ID_MIN = 10000;
     private const BULK_SEED_HASH_KEY   = 'bulk_seed_hash';
+    private const SEED_LOCK_NAME       = 'quizzapp_db_seed';
+    private const SEED_LOCK_TIMEOUT_SEC  = 600;
 
     private static ?PDO $pdo = null;
 
@@ -67,75 +69,148 @@ class Database
         if (self::$seedChecked) {
             return;
         }
-        self::$seedChecked = true;
 
         try {
-            // Always run these schema migrations regardless of seeding state
-            try {
-                $pdo->exec("CREATE TABLE IF NOT EXISTS `user_question_history` (
-                    `id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `user_id` INT NOT NULL,
-                    `question_id` INT NOT NULL,
-                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY `uk_user_question` (`user_id`, `question_id`),
-                    INDEX `idx_uqh_user` (`user_id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-            } catch (Exception $e) {}
-
-            // Add match_room_code column if it doesn't exist
-            try {
-                $exists = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'questions' AND COLUMN_NAME = 'match_room_code'");
-                if ($exists && (int)$exists->fetchColumn() === 0) {
-                    $pdo->exec("ALTER TABLE `questions` ADD COLUMN `match_room_code` VARCHAR(10) DEFAULT NULL, ADD INDEX `idx_questions_room` (`match_room_code`)");
-                }
-            } catch (Exception $e) {}
-
-            $stmtCat = $pdo->query("SELECT COUNT(*) FROM categories");
-            $catCount = $stmtCat ? (int)$stmtCat->fetchColumn() : 0;
-
-            $stmtUser = $pdo->query("SELECT password_hash FROM users WHERE id = 1");
-            $rowUser = $stmtUser ? $stmtUser->fetch() : false;
-            $validAdmin = $rowUser && password_verify('admin123', (string)($rowUser['password_hash'] ?? ''));
-
-            $stmtQ = $pdo->query("SELECT COUNT(*) FROM questions");
-            $qCount = $stmtQ ? (int)$stmtQ->fetchColumn() : 0;
-
-            self::ensureSettingsTable($pdo);
+            self::runLightweightMigrations($pdo);
 
             $baseDir = dirname(__DIR__, 2);
             $migrationFile = $baseDir . '/database/migration.sql';
             $seedFile = $baseDir . '/database/seed.sql';
             $seedBulkFile = $baseDir . '/database/seed_bulk.sql';
 
-            // Base vide : migration + seed initial + bulk.
+            $catCount = self::fetchCount($pdo, 'SELECT COUNT(*) FROM categories');
+            $qCount = self::fetchCount($pdo, 'SELECT COUNT(*) FROM questions');
+
+            $stmtUser = $pdo->query('SELECT password_hash FROM users WHERE id = 1');
+            $rowUser = $stmtUser ? $stmtUser->fetch() : false;
+            $validAdmin = $rowUser && password_verify('admin123', (string)($rowUser['password_hash'] ?? ''));
+
             $needsFullSeed = ($catCount < 21) || (($qCount === 0) && !$validAdmin);
 
-            if ($needsFullSeed && file_exists($migrationFile) && file_exists($seedFile)) {
-                $pdo->exec("SET NAMES utf8mb4");
-                $pdo->exec(file_get_contents($migrationFile));
-                $pdo->exec(file_get_contents($seedFile));
+            if (!$needsFullSeed && file_exists($seedBulkFile)) {
+                $hash = hash_file('sha256', $seedBulkFile);
+                if ($hash !== false && self::getSetting($pdo, self::BULK_SEED_HASH_KEY) === $hash) {
+                    self::$seedChecked = true;
+                    return;
+                }
+            }
 
-                if (file_exists($seedBulkFile)) {
-                    $pdo->exec(file_get_contents($seedBulkFile));
-                    self::storeBulkSeedHash($pdo, $seedBulkFile);
+            if (!$needsFullSeed && !file_exists($seedBulkFile)) {
+                self::$seedChecked = true;
+                return;
+            }
+
+            if (!self::acquireSeedLock($pdo)) {
+                // Un autre worker PHP importe déjà le seed : ne pas concurrencer.
+                return;
+            }
+
+            try {
+                if ($needsFullSeed && file_exists($migrationFile) && file_exists($seedFile)) {
+                    self::runFullSeed($pdo, $migrationFile, $seedFile, $seedBulkFile);
+                } elseif (file_exists($seedBulkFile)) {
+                    self::syncBulkSeed($pdo, $seedBulkFile);
                 }
 
-                // Ensure status ENUM includes 'selecting'
-                try {
-                    $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
-                } catch (Exception $e) {}
-
-                // Deduplicate answers and enforce unique index
-                try {
-                    $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
-                    $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
-                } catch (Exception $e) {}
-            } elseif (file_exists($seedBulkFile)) {
-                self::syncBulkSeed($pdo, $seedBulkFile);
+                self::$seedChecked = true;
+            } finally {
+                self::releaseSeedLock($pdo);
             }
         } catch (Exception $e) {
-            error_log("Auto database seeding attempt: " . $e->getMessage());
+            error_log('Auto database seeding attempt: ' . $e->getMessage());
         }
+    }
+
+    private static function runLightweightMigrations(PDO $pdo): void
+    {
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `user_question_history` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `user_id` INT NOT NULL,
+                `question_id` INT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_user_question` (`user_id`, `question_id`),
+                INDEX `idx_uqh_user` (`user_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Exception $e) {}
+
+        try {
+            $exists = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'questions' AND COLUMN_NAME = 'match_room_code'");
+            if ($exists && (int)$exists->fetchColumn() === 0) {
+                $pdo->exec("ALTER TABLE `questions` ADD COLUMN `match_room_code` VARCHAR(10) DEFAULT NULL, ADD INDEX `idx_questions_room` (`match_room_code`)");
+            }
+        } catch (Exception $e) {}
+
+        self::ensureSettingsTable($pdo);
+    }
+
+    private static function fetchCount(PDO $pdo, string $sql): int
+    {
+        $stmt = $pdo->query($sql);
+
+        return $stmt ? (int)$stmt->fetchColumn() : 0;
+    }
+
+    private static function acquireSeedLock(PDO $pdo): bool
+    {
+        $stmt = $pdo->query(
+            'SELECT GET_LOCK(' . $pdo->quote(self::SEED_LOCK_NAME) . ', ' . self::SEED_LOCK_TIMEOUT_SEC . ')'
+        );
+
+        return $stmt !== false && (int)$stmt->fetchColumn() === 1;
+    }
+
+    private static function releaseSeedLock(PDO $pdo): void
+    {
+        try {
+            $pdo->query('SELECT RELEASE_LOCK(' . $pdo->quote(self::SEED_LOCK_NAME) . ')');
+        } catch (Exception $e) {}
+    }
+
+    private static function isDeadlock(PDOException $e): bool
+    {
+        $code = (string)$e->getCode();
+        $message = $e->getMessage();
+
+        return $code === '40001'
+            || str_contains($message, '1213 Deadlock')
+            || str_contains($message, 'Serialization failure');
+    }
+
+    private static function execWithRetry(PDO $pdo, string $sql, int $maxAttempts = 3): void
+    {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $pdo->exec($sql);
+                return;
+            } catch (PDOException $e) {
+                if ($attempt >= $maxAttempts || !self::isDeadlock($e)) {
+                    throw $e;
+                }
+                usleep(250000 * $attempt);
+            }
+        }
+    }
+
+    private static function runFullSeed(PDO $pdo, string $migrationFile, string $seedFile, string $seedBulkFile): void
+    {
+        $pdo->exec('SET NAMES utf8mb4');
+        self::execWithRetry($pdo, file_get_contents($migrationFile) ?: '');
+        self::execWithRetry($pdo, file_get_contents($seedFile) ?: '');
+
+        if (file_exists($seedBulkFile)) {
+            self::execWithRetry($pdo, file_get_contents($seedBulkFile) ?: '');
+            self::storeBulkSeedHash($pdo, $seedBulkFile);
+        }
+
+        try {
+            $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
+        } catch (Exception $e) {}
+
+        try {
+            $pdo->exec('DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id');
+            $pdo->exec('ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))');
+        } catch (Exception $e) {}
     }
 
     private static function ensureSettingsTable(PDO $pdo): void
@@ -208,14 +283,13 @@ class Database
         if ($storedHash !== null) {
             self::purgeGeneratedBulkSeed($pdo);
         } else {
-            $stmt = $pdo->query('SELECT COUNT(*) FROM quizzes WHERE id >= ' . self::BULK_QUIZ_ID_MIN);
-            $existingBulk = $stmt ? (int)$stmt->fetchColumn() : 0;
+            $existingBulk = self::fetchCount($pdo, 'SELECT COUNT(*) FROM quizzes WHERE id >= ' . self::BULK_QUIZ_ID_MIN);
             if ($existingBulk > 0) {
                 self::purgeGeneratedBulkSeed($pdo);
             }
         }
 
-        $pdo->exec(file_get_contents($seedBulkFile));
+        self::execWithRetry($pdo, file_get_contents($seedBulkFile) ?: '');
         self::setSetting($pdo, self::BULK_SEED_HASH_KEY, $hash);
     }
 
