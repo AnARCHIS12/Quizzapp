@@ -96,37 +96,37 @@ class Database
             $stmtQ = $pdo->query("SELECT COUNT(*) FROM questions");
             $qCount = $stmtQ ? (int)$stmtQ->fetchColumn() : 0;
 
-            $needsSeeding = ($catCount < 21) || ($qCount < 1000) || !$validAdmin;
+            $baseDir = dirname(__DIR__, 2);
+            $migrationFile = $baseDir . '/database/migration.sql';
+            $seedFile = $baseDir . '/database/seed.sql';
+            $seedBulkFile = $baseDir . '/database/seed_bulk.sql';
 
-            if ($needsSeeding) {
-                $baseDir = dirname(__DIR__, 2);
-                $migrationFile = $baseDir . '/database/migration.sql';
-                $seedFile = $baseDir . '/database/seed.sql';
-                $seedBulkFile = $baseDir . '/database/seed_bulk.sql';
+            // Base vide : migration + seed initial + bulk.
+            $needsFullSeed = ($catCount < 21) || (($qCount === 0) && !$validAdmin);
 
-                if (file_exists($migrationFile) && file_exists($seedFile)) {
-                    $pdo->exec("SET NAMES utf8mb4");
-                    $migrationSql = file_get_contents($migrationFile);
-                    $seedSql = file_get_contents($seedFile);
+            if ($needsFullSeed && file_exists($migrationFile) && file_exists($seedFile)) {
+                $pdo->exec("SET NAMES utf8mb4");
+                $pdo->exec(file_get_contents($migrationFile));
+                $pdo->exec(file_get_contents($seedFile));
 
-                    $pdo->exec($migrationSql);
-                    $pdo->exec($seedSql);
-
-                    if (file_exists($seedBulkFile)) {
-                        $pdo->exec(file_get_contents($seedBulkFile));
-                    }
-
-                    // Ensure status ENUM includes 'selecting'
-                    try {
-                        $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
-                    } catch (Exception $e) {}
-
-                    // Deduplicate answers and enforce unique index
-                    try {
-                        $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
-                        $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
-                    } catch (Exception $e) {}
+                if (file_exists($seedBulkFile)) {
+                    $pdo->exec(file_get_contents($seedBulkFile));
                 }
+
+                // Ensure status ENUM includes 'selecting'
+                try {
+                    $pdo->exec("ALTER TABLE `matches` MODIFY COLUMN `status` ENUM('waiting', 'selecting', 'playing', 'finished') DEFAULT 'waiting'");
+                } catch (Exception $e) {}
+
+                // Deduplicate answers and enforce unique index
+                try {
+                    $pdo->exec("DELETE a1 FROM answers a1 JOIN answers a2 ON a1.question_id = a2.question_id AND a1.answer_text = a2.answer_text AND a1.id > a2.id");
+                    $pdo->exec("ALTER TABLE answers ADD UNIQUE INDEX idx_answers_unique (question_id, answer_text(191))");
+                } catch (Exception $e) {}
+            } elseif ($qCount < 1000 && file_exists($seedBulkFile)) {
+                // Base existante : ajouter uniquement le bulk (INSERT IGNORE, sans toucher aux users/scores).
+                $pdo->exec("SET NAMES utf8mb4");
+                $pdo->exec(file_get_contents($seedBulkFile));
             }
         } catch (Exception $e) {
             error_log("Auto database seeding attempt: " . $e->getMessage());
