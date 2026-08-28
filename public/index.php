@@ -12,6 +12,7 @@ use App\Controllers\QuizController;
 use App\Controllers\AuthController;
 use App\Controllers\DuelController;
 use App\Controllers\AdminController;
+use App\Controllers\ApiController;
 
 // 1. Boot up Autoloader
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -83,6 +84,22 @@ $router->post('/admin/users/role', [AdminController::class, 'updateUserRole'], [
 $router->post('/admin/backup', [AdminController::class, 'backupDatabase'], [AdminMiddleware::class, CSRFMiddleware::class]);
 $router->post('/admin/export', [AdminController::class, 'exportJSON'], [AdminMiddleware::class, CSRFMiddleware::class]);
 $router->post('/admin/import', [AdminController::class, 'importJSON'], [AdminMiddleware::class, CSRFMiddleware::class]);
+
+// F. Mobile API Routes (JSON — no CSRF, auth via Bearer JWT)
+// Handle CORS preflight for Flutter app requests
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type');
+    http_response_code(204);
+    exit;
+}
+$router->get('/api/ping',           [ApiController::class, 'ping']);
+$router->post('/api/auth/login',    [ApiController::class, 'login']);
+$router->post('/api/auth/register', [ApiController::class, 'register']);
+$router->get('/api/categories',     [ApiController::class, 'categories']);
+$router->get('/api/profile',        [ApiController::class, 'profile']);
+$router->get('/api/ws-token',       [ApiController::class, 'wsToken']);
 
 // 6. Dispatch router Request
 try {
