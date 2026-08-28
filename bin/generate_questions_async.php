@@ -1,87 +1,205 @@
 <?php
 /**
- * Async AI Question Generator
- * Called in background (proc_open / non-blocking) when a new duel room is ready.
- * Generates 5 fresh questions per category using Mistral AI and stores them in DB.
- * Questions are strictly scoped to the exact category + its parent context.
+ * Async AI Question Generator — Multi-Provider with Automatic Fallback
  *
- * Usage: php bin/generate_questions_async.php <category_id1> <category_id2> ...
+ * Provider chain (automatic failover):
+ *   1. Mistral AI     (MISTRAL_API_KEY)      — primary
+ *   2. Groq           (GROQ_API_KEY)          — free, 14 400 req/day, ultra-fast
+ *   3. OpenRouter     (OPENROUTER_API_KEY)    — aggregator, many free models
+ *
+ * If a provider returns rate-limit (429) or quota error (402/429), the next one is tried.
+ * Usage: php bin/generate_questions_async.php [roomCode] <cat_id1> <cat_id2> ...
  */
 
 declare(strict_types=1);
 
-// Bootstrap the application
 $baseDir = dirname(__DIR__);
 require_once $baseDir . '/vendor/autoload.php';
 
-// Load .env
+// ─── Load .env ────────────────────────────────────────────────────────────────
 $envFile = $baseDir . '/.env';
 if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
         if (str_starts_with(trim($line), '#')) continue;
         if (str_contains($line, '=')) {
-            [$key, $value] = explode('=', $line, 2);
-            $_ENV[trim($key)] = trim($value);
-            putenv(trim($key) . '=' . trim($value));
+            [$k, $v] = explode('=', $line, 2);
+            $_ENV[trim($k)] = trim($v);
+            putenv(trim($k) . '=' . trim($v));
         }
     }
 }
 
-$mistralKey   = $_ENV['MISTRAL_API_KEY'] ?? getenv('MISTRAL_API_KEY') ?? '';
-$mistralModel = $_ENV['MISTRAL_MODEL']   ?? getenv('MISTRAL_MODEL')   ?? 'mistral-small-latest';
+// ─── Provider configuration ───────────────────────────────────────────────────
+$providers = [];
 
-if (empty($mistralKey)) {
+$mistralKey = $_ENV['MISTRAL_API_KEY'] ?? getenv('MISTRAL_API_KEY') ?? '';
+if (!empty($mistralKey)) {
+    $providers[] = [
+        'name'    => 'Mistral',
+        'url'     => 'https://api.mistral.ai/v1/chat/completions',
+        'key'     => $mistralKey,
+        'model'   => $_ENV['MISTRAL_MODEL'] ?? getenv('MISTRAL_MODEL') ?? 'mistral-small-latest',
+        'format'  => 'mistral', // uses response_format: json_object
+    ];
+}
+
+$groqKey = $_ENV['GROQ_API_KEY'] ?? getenv('GROQ_API_KEY') ?? '';
+if (!empty($groqKey)) {
+    $providers[] = [
+        'name'    => 'Groq',
+        'url'     => 'https://api.groq.com/openai/v1/chat/completions',
+        'key'     => $groqKey,
+        'model'   => $_ENV['GROQ_MODEL'] ?? getenv('GROQ_MODEL') ?? 'llama-3.1-70b-versatile',
+        'format'  => 'openai', // OpenAI-compatible, no json_object mode on all models
+    ];
+}
+
+$openrouterKey = $_ENV['OPENROUTER_API_KEY'] ?? getenv('OPENROUTER_API_KEY') ?? '';
+if (!empty($openrouterKey)) {
+    $providers[] = [
+        'name'    => 'OpenRouter',
+        'url'     => 'https://openrouter.ai/api/v1/chat/completions',
+        'key'     => $openrouterKey,
+        'model'   => $_ENV['OPENROUTER_MODEL'] ?? getenv('OPENROUTER_MODEL') ?? 'meta-llama/llama-3.1-8b-instruct:free',
+        'format'  => 'openai',
+    ];
+}
+
+if (empty($providers)) {
+    // No AI provider configured — exit silently
     exit(0);
 }
 
-// Get room code and category IDs from arguments
+// ─── Arguments ────────────────────────────────────────────────────────────────
 $roomCode = null;
 if (isset($argv[1]) && !is_numeric($argv[1])) {
-    $roomCode = strtoupper(trim($argv[1]));
+    $roomCode    = strtoupper(trim($argv[1]));
     $categoryIds = array_map('intval', array_slice($argv, 2));
 } else {
     $categoryIds = array_map('intval', array_slice($argv, 1));
 }
 
-if (empty($categoryIds)) {
-    exit(0);
-}
+if (empty($categoryIds)) exit(0);
 
-// Database connection
-$dbHost = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'db';
-$dbPort = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?? '3306';
-$dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'quizzapp';
-$dbUser = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? 'quizzapp_user';
-$dbPass = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '';
-
+// ─── Database connection ──────────────────────────────────────────────────────
 try {
     $pdo = new PDO(
-        "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4",
-        $dbUser,
-        $dbPass,
+        sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+            $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'db',
+            $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?? '3306',
+            $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'quizzapp'
+        ),
+        $_ENV['DB_USER'] ?? getenv('DB_USER') ?? 'quizzapp_user',
+        $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '',
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 } catch (Exception $e) {
     exit(0);
 }
 
-// Track all question texts generated in this run to avoid same-text duplicates across repeated categories
+// ─── Helper: call one provider ────────────────────────────────────────────────
+/**
+ * @return array{questions: list<array>, provider: string}|null
+ */
+function callProvider(array $provider, string $prompt): ?array
+{
+    $isMistral = $provider['format'] === 'mistral';
+
+    $body = [
+        'model'       => $provider['model'],
+        'messages'    => [['role' => 'user', 'content' => $prompt]],
+        'temperature' => 0.85,
+        'max_tokens'  => 2000,
+    ];
+
+    // Mistral supports json_object mode; Groq/OpenRouter: add JSON instruction in prompt instead
+    if ($isMistral) {
+        $body['response_format'] = ['type' => 'json_object'];
+    }
+
+    $headers = [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $provider['key'],
+    ];
+
+    // OpenRouter requires site info headers
+    if ($provider['name'] === 'OpenRouter') {
+        $headers[] = 'HTTP-Referer: https://quizzapp.revlibertaire.com';
+        $headers[] = 'X-Title: QuizzApp';
+    }
+
+    $ch = curl_init($provider['url']);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($body),
+        CURLOPT_TIMEOUT        => 45,
+        CURLOPT_HTTPHEADER     => $headers,
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // 429 = rate limit, 402 = quota exceeded → signal to try next provider
+    if (in_array($httpCode, [429, 402, 503], true)) {
+        error_log("[QuizzApp AI] {$provider['name']} quota/rate-limit ($httpCode) — trying next provider");
+        return null;
+    }
+
+    if ($httpCode !== 200 || !$response) {
+        error_log("[QuizzApp AI] {$provider['name']} error $httpCode");
+        return null;
+    }
+
+    $decoded = json_decode($response, true);
+    $content = $decoded['choices'][0]['message']['content'] ?? '';
+    if (empty($content)) return null;
+
+    // Parse JSON — handle array or wrapped {"questions":[...]}
+    $parsed = json_decode($content, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        // Try to extract JSON from text (Groq sometimes adds prose)
+        if (preg_match('/\[.*\]/s', $content, $m)) {
+            $parsed = json_decode($m[0], true);
+        }
+        if (json_last_error() !== JSON_ERROR_NONE) return null;
+    }
+
+    if (isset($parsed['questions'])) $parsed = $parsed['questions'];
+    if (!isset($parsed[0])) $parsed = [$parsed];
+    if (!is_array($parsed)) return null;
+
+    return ['questions' => $parsed, 'provider' => $provider['name']];
+}
+
+// ─── Helper: call chain with fallback ─────────────────────────────────────────
+function callWithFallback(array $providers, string $prompt): ?array
+{
+    foreach ($providers as $provider) {
+        $result = callProvider($provider, $prompt);
+        if ($result !== null) return $result;
+    }
+    error_log('[QuizzApp AI] All providers failed — no questions generated for this category');
+    return null;
+}
+
+// ─── Main generation loop ─────────────────────────────────────────────────────
 $generatedThisRun = [];
 
 foreach ($categoryIds as $catId) {
-    // Get category with its parent name for precise context
+    // Fetch category
     $stmt = $pdo->prepare(
         "SELECT c.id, c.name, c.description, p.name AS parent_name
-         FROM categories c
-         LEFT JOIN categories p ON c.parent_id = p.id
+         FROM categories c LEFT JOIN categories p ON c.parent_id = p.id
          WHERE c.id = ?"
     );
     $stmt->execute([$catId]);
     $category = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$category) continue;
 
-    // Get quiz for this category
+    // Fetch quiz
     $stmt = $pdo->prepare("SELECT id FROM quizzes WHERE category_id = ? LIMIT 1");
     $stmt->execute([$catId]);
     $quiz = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -92,20 +210,15 @@ foreach ($categoryIds as $catId) {
     $parentName   = $category['parent_name'] ?? null;
     $description  = $category['description'] ?? '';
 
-    // Build a precise themed context for Mistral
     if ($parentName) {
-        $themeContext = "la sous-catégorie \"{$categoryName}\" (qui appartient à la catégorie parente \"{$parentName}\")";
-        $scopeWarning = "IMPORTANT : Toutes les questions doivent porter EXCLUSIVEMENT sur \"{$categoryName}\", pas sur d'autres thèmes de \"{$parentName}\".";
+        $themeContext = "la sous-catégorie \"{$categoryName}\" (appartenant à \"{$parentName}\")";
+        $scopeWarning = "IMPORTANT : questions EXCLUSIVEMENT sur \"{$categoryName}\", pas sur d'autres thèmes de \"{$parentName}\".";
     } else {
         $themeContext = "la catégorie \"{$categoryName}\"";
-        $scopeWarning = "IMPORTANT : Toutes les questions doivent porter EXCLUSIVEMENT sur \"{$categoryName}\".";
+        $scopeWarning = "IMPORTANT : questions EXCLUSIVEMENT sur \"{$categoryName}\".";
     }
+    if (!empty($description)) $themeContext .= " (description : {$description})";
 
-    if (!empty($description)) {
-        $themeContext .= " (description : {$description})";
-    }
-
-    // Prompt with strict category scoping
     $prompt = "Tu es un expert en quiz éducatif francophone. Génère exactement 3 questions de quiz uniques et inédites sur {$themeContext}.
 
 {$scopeWarning}
@@ -124,53 +237,16 @@ Pour chaque question, utilise ce format JSON exact :
   ]
 }
 
-Retourne UNIQUEMENT un tableau JSON valide de 5 objets, sans texte avant ou après.
-Les questions doivent être variées, précises, éducatives et difficiles. Évite les questions trop génériques ou déjà vues.";
+Retourne UNIQUEMENT un tableau JSON valide de 3 objets, sans texte avant ou après.
+Les questions doivent être variées, précises, éducatives et difficiles. Évite les questions trop génériques.";
 
-    $payload = json_encode([
-        'model'    => $mistralModel,
-        'messages' => [
-            ['role' => 'user', 'content' => $prompt]
-        ],
-        'temperature'     => 0.85,
-        'max_tokens'      => 2000,
-        'response_format' => ['type' => 'json_object']
-    ]);
+    // ─── Call AI with automatic fallback ─────────────────────────────────────
+    $result = callWithFallback($providers, $prompt);
+    if ($result === null) continue;
 
-    $ch = curl_init('https://api.mistral.ai/v1/chat/completions');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $payload,
-        CURLOPT_TIMEOUT        => 30,
-        CURLOPT_HTTPHEADER     => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $mistralKey
-        ]
-    ]);
+    $questions = $result['questions'];
 
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode !== 200 || !$response) continue;
-
-    $decoded = json_decode($response, true);
-    $content = $decoded['choices'][0]['message']['content'] ?? '';
-    if (empty($content)) continue;
-
-    // Parse JSON — handle array or wrapped object
-    $questions = json_decode($content, true);
-    if (json_last_error() !== JSON_ERROR_NONE) continue;
-
-    if (isset($questions['questions'])) {
-        $questions = $questions['questions'];
-    } elseif (!isset($questions[0])) {
-        $questions = [$questions];
-    }
-
-    if (!is_array($questions)) continue;
-
+    // ─── Insert questions in DB ───────────────────────────────────────────────
     foreach ($questions as $q) {
         $questionText = trim($q['question'] ?? '');
         $explanation  = trim($q['explanation'] ?? '');
@@ -178,18 +254,14 @@ Les questions doivent être variées, précises, éducatives et difficiles. Évi
         $answers      = $q['answers'] ?? [];
 
         if (empty($questionText) || count($answers) < 2) continue;
-
-        // Skip if already generated in this run (same category processed twice = 2nd pick)
         if (in_array($questionText, $generatedThisRun, true)) continue;
 
-        // Skip exact duplicates already in DB
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM questions WHERE quiz_id = ? AND question_text = ?");
         $stmt->execute([$quizId, $questionText]);
         if ((int)$stmt->fetchColumn() > 0) continue;
 
         $generatedThisRun[] = $questionText;
 
-        // Insert question tagged with match_room_code
         $stmt = $pdo->prepare(
             "INSERT INTO questions (quiz_id, question_text, question_type, points, explanation, sorting_order, match_room_code)
              VALUES (?, ?, 'qcm', ?, ?, 0, ?)"
@@ -197,11 +269,7 @@ Les questions doivent être variées, précises, éducatives et difficiles. Évi
         $stmt->execute([$quizId, $questionText, $points, $explanation, $roomCode]);
         $questionId = (int)$pdo->lastInsertId();
 
-        // Insert answers
-        $stmtAns = $pdo->prepare(
-            "INSERT IGNORE INTO answers (question_id, answer_text, is_correct)
-             VALUES (?, ?, ?)"
-        );
+        $stmtAns = $pdo->prepare("INSERT IGNORE INTO answers (question_id, answer_text, is_correct) VALUES (?, ?, ?)");
         foreach ($answers as $ans) {
             $ansText   = trim($ans['text'] ?? '');
             $isCorrect = ($ans['correct'] ?? false) ? 1 : 0;
