@@ -145,10 +145,6 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
           break;
       }
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<WebSocketService>().setReady(widget.roomCode);
-    });
   }
 
   void _pickCategory(int catId) {
