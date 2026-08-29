@@ -403,10 +403,10 @@ class WebSocketServer implements MessageComponentInterface
         Database::query("UPDATE matches SET status = 'selecting' WHERE room_code = ?", [$code]);
 
         $firstPicker = $pickOrder[0] ?? null;
-        foreach ($room['players'] as $rId => $player) {
-            if (isset($this->clients[$rId])) {
+        foreach ($room['players'] as $player) {
+            if (isset($player['connection'])) {
                 $isTurn = ((int)$firstPicker === (int)$player['user_id']);
-                $this->clients[$rId]->send(json_encode([
+                $player['connection']->send(json_encode([
                     'type'             => 'category_selection_start',
                     'pick_order'       => $pickOrder,
                     'current_picker'   => $firstPicker,
@@ -565,10 +565,10 @@ class WebSocketServer implements MessageComponentInterface
             }
         } else {
             $nextPicker = $room['pick_order'][$nextPickIndex] ?? null;
-            foreach ($room['players'] as $rId => $player) {
-                if (isset($this->clients[$rId])) {
+            foreach ($room['players'] as $player) {
+                if (isset($player['connection'])) {
                     $isTurn = ((int)$nextPicker === (int)$player['user_id']);
-                    $this->clients[$rId]->send(json_encode([
+                    $player['connection']->send(json_encode([
                         'type'           => 'category_picked',
                         'picked_by'      => $userId,
                         'category'       => $cat,
