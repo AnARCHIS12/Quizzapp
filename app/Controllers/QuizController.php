@@ -43,6 +43,14 @@ class QuizController
     }
 
     /**
+     * Show Account Deletion page (for Google Play Store compliance)
+     */
+    public function deleteAccountInfo(): void
+    {
+        View::render('delete_account');
+    }
+
+    /**
      * Show quizzes in a category
      */
     public function showCategory(array $params): void
