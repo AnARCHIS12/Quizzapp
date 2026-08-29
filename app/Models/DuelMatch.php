@@ -7,9 +7,9 @@ namespace App\Models;
 use App\Core\Database;
 
 /**
- * Match Model for representing duel lobby sessions
+ * DuelMatch Model for representing duel lobby sessions
  */
-class Match
+class DuelMatch
 {
     public static function findByCode(string $code): ?array
     {
@@ -28,6 +28,6 @@ class Match
 
     public static function getActiveMatchesCount(): int
     {
-        return (int) Database::fetchColumn("SELECT COUNT(*) FROM matches WHERE status = 'playing'");
+        return (int) Database::fetchColumn("SELECT COUNT(*) FROM matches WHERE status IN ('waiting', 'playing')");
     }
 }
