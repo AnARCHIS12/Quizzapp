@@ -80,6 +80,52 @@ class ApiService {
     final res = await http.get(await _uri('/api/ws-token'), headers: await _headers);
     return (_parse(res))['token'] as String;
   }
+
+  Future<Map<String, dynamic>> generateSoloQuiz({
+    required int categoryId,
+    required String categoryName,
+    String? subCategory,
+    int count = 10,
+  }) async {
+    final res = await http.post(
+      await _uri('/api/quiz/generate'),
+      headers: await _headers,
+      body: json.encode({
+        'category_id': categoryId,
+        'category_name': categoryName,
+        'sub_category': subCategory ?? '',
+        'count': count,
+      }),
+    );
+    return _parse(res);
+  }
+
+  Future<Map<String, dynamic>> submitSoloScore({
+    required int quizId,
+    required int score,
+    required int correctCount,
+    required int totalQuestions,
+    required double timeSpent,
+  }) async {
+    final res = await http.post(
+      await _uri('/api/quiz/submit'),
+      headers: await _headers,
+      body: json.encode({
+        'quiz_id': quizId,
+        'score': score,
+        'correct_count': correctCount,
+        'total_questions': totalQuestions,
+        'time_spent': timeSpent,
+      }),
+    );
+    return _parse(res);
+  }
+
+  Future<List<Map<String, dynamic>>> getLeaderboard() async {
+    final res = await http.get(await _uri('/api/leaderboard'), headers: await _headers);
+    final data = _parse(res);
+    return List<Map<String, dynamic>>.from(data['leaderboard'] as List);
+  }
 }
 
 class ApiException implements Exception {

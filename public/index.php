@@ -99,12 +99,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-$router->get('/api/ping',           [ApiController::class, 'ping']);
-$router->post('/api/auth/login',    [ApiController::class, 'login']);
-$router->post('/api/auth/register', [ApiController::class, 'register']);
-$router->get('/api/categories',     [ApiController::class, 'categories']);
-$router->get('/api/profile',        [ApiController::class, 'profile']);
-$router->get('/api/ws-token',       [ApiController::class, 'wsToken']);
+$router->get('/api/ping',                 [ApiController::class, 'ping']);
+$router->post('/api/auth/login',          [ApiController::class, 'login']);
+$router->post('/api/auth/register',       [ApiController::class, 'register']);
+$router->get('/api/categories',           [ApiController::class, 'categories']);
+$router->get('/api/category/{id}/quizzes',[ApiController::class, 'categoryQuizzes']);
+$router->post('/api/quiz/generate',       [ApiController::class, 'generateSoloQuiz']);
+$router->post('/api/quiz/submit',         [ApiController::class, 'submitSoloScore']);
+$router->get('/api/leaderboard',          [ApiController::class, 'leaderboard']);
+$router->get('/api/profile',              [ApiController::class, 'profile']);
+$router->get('/api/ws-token',             [ApiController::class, 'wsToken']);
 
 // 6. Dispatch router Request
 try {

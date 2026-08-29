@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 20),
               if (subcategories.isNotEmpty) ...[
                 const Text(
-                  'Sous-catégories sélectionnables en duel :',
+                  'Sous-catégories sélectionnables :',
                   style: TextStyle(
                     color: Colors.white70,
                     fontWeight: FontWeight.w600,
@@ -105,40 +105,71 @@ class _HomeScreenState extends State<HomeScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: subcategories.map((sub) {
-                    return Chip(
+                    return ActionChip(
                       backgroundColor: const Color(0xFF6D28D9).withValues(alpha: 0.15),
                       side: BorderSide(color: const Color(0xFF6D28D9).withValues(alpha: 0.4)),
                       label: Text(
                         sub.name,
                         style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        context.push(
+                          '/quiz/solo',
+                          extra: {
+                            'categoryId': sub.id,
+                            'categoryName': category.name,
+                            'subCategory': sub.name,
+                          },
+                        );
+                      },
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 20),
-              ] else ...[
-                const Text(
-                  'Catégorie générale avec questions variées générées par l\'IA.',
-                  style: TextStyle(color: Colors.white60, fontSize: 13),
-                ),
-                const SizedBox(height: 20),
               ],
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6D28D9),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  context.go('/duel');
-                },
-                icon: const FaIcon(FontAwesomeIcons.gamepad, size: 16),
-                label: const Text(
-                  'Lancer un duel multijoueur',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        context.push(
+                          '/quiz/solo',
+                          extra: {
+                            'categoryId': category.id,
+                            'categoryName': category.name,
+                          },
+                        );
+                      },
+                      icon: const FaIcon(FontAwesomeIcons.brain, size: 14),
+                      label: const Text('Mode Solo', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6D28D9),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        context.go('/duel');
+                      },
+                      icon: const FaIcon(FontAwesomeIcons.gamepad, size: 14),
+                      label: const Text('Duel Direct', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -162,6 +193,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const FaIcon(FontAwesomeIcons.trophy, size: 17, color: Colors.amberAccent),
+            tooltip: 'Classement',
+            onPressed: () => context.push('/leaderboard'),
+          ),
           IconButton(
             icon: const FaIcon(FontAwesomeIcons.solidUser, size: 18),
             tooltip: 'Profil',
@@ -232,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 FaIcon(FontAwesomeIcons.layerGroup, size: 16, color: Colors.white70),
                 SizedBox(width: 8),
                 Text(
-                  'Catégories disponibles',
+                  'Catégories & Modes de jeu',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

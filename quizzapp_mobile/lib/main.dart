@@ -10,6 +10,8 @@ import 'screens/register_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/leaderboard_screen.dart';
+import 'screens/quiz/solo_quiz_screen.dart';
 import 'screens/duel/duel_lobby_screen.dart';
 import 'screens/duel/category_pick_screen.dart';
 import 'screens/duel/generating_screen.dart';
@@ -116,6 +118,18 @@ class QuizzApp extends StatelessWidget {
         GoRoute(path: '/privacy', builder: (_, __) => const PrivacyPolicyScreen()),
         GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
         GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+        GoRoute(path: '/leaderboard', builder: (_, __) => const LeaderboardScreen()),
+        GoRoute(
+          path: '/quiz/solo',
+          builder: (_, state) {
+            final extra = state.extra as Map<String, dynamic>? ?? {};
+            return SoloQuizScreen(
+              categoryId: extra['categoryId'] as int? ?? 1,
+              categoryName: extra['categoryName'] as String? ?? 'Culture Générale',
+              subCategory: extra['subCategory'] as String?,
+            );
+          },
+        ),
         GoRoute(path: '/duel', builder: (_, __) => const DuelLobbyScreen()),
         GoRoute(
           path: '/duel/pick/:code',
@@ -139,22 +153,30 @@ class QuizzApp extends StatelessWidget {
     );
   }
 
-  Future<String?> _globalRedirect(
-    BuildContext context,
-    GoRouterState state,
-  ) async {
+  // Redirection d'authentification et de serveur
+  Future<String?> _globalRedirect(BuildContext context, GoRouterState state) async {
     const storage = FlutterSecureStorage();
-    final hasServer = await storage.read(key: 'server_url') != null;
-    final hasToken = await storage.read(key: 'auth_token') != null;
+    final serverUrl = await storage.read(key: 'server_url');
+    final token = await storage.read(key: 'auth_token');
 
-    final onServer = state.matchedLocation == '/server';
-    final onPrivacy = state.matchedLocation == '/privacy';
-    final onAuth = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+    final loc = state.matchedLocation;
+    final isAuthRoute = loc == '/login' || loc == '/register' || loc == '/server' || loc == '/privacy';
 
-    if (onPrivacy) return null;
-    if (!hasServer) return onServer ? null : '/server';
-    if (!hasToken) return onAuth ? null : '/login';
-    if (onServer || onAuth) return '/home';
-    return null;
+    // 1. Pas de serveur configuré -> écran serveur
+    if (serverUrl == null || serverUrl.isEmpty) {
+      return loc == '/server' ? null : '/server';
+    }
+
+    // 2. Pas de token -> écran login (sauf si déjà sur register/server/privacy)
+    if (token == null || token.isEmpty) {
+      return isAuthRoute ? null : '/login';
+    }
+
+    // 3. Connecté mais sur une page d'auth -> accueil
+    if (loc == '/login' || loc == '/register' || loc == '/server') {
+      return '/home';
+    }
+
+    return null; // Navigation autorisée
   }
 }

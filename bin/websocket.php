@@ -10,7 +10,7 @@ use App\Services\WebSocketServer;
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 // Disable error display in console / response (log securely to file/output)
-error_reporting(E_ALL);
+error_reporting(E_ALL & ~E_DEPRECATED);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 date_default_timezone_set('UTC');

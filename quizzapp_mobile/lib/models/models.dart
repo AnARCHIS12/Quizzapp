@@ -69,4 +69,13 @@ class QuestionModel {
     answers: (j['answers'] as List<dynamic>? ?? [])
         .map((a) => AnswerModel.fromJson(a as Map<String, dynamic>)).toList(),
     explanation: j['explanation'] as String?);
+
+  factory QuestionModel.fromJson(Map<String, dynamic> j) => QuestionModel(
+    index: j['id'] as int? ?? 0,
+    text: (j['question_text'] ?? j['question'] ?? '') as String,
+    type: j['type'] as String? ?? 'mcq',
+    points: int.tryParse(j['points']?.toString() ?? '') ?? 10,
+    answers: (j['answers'] as List<dynamic>? ?? [])
+        .map((a) => AnswerModel.fromJson(a as Map<String, dynamic>)).toList(),
+    explanation: j['explanation'] as String?);
 }
