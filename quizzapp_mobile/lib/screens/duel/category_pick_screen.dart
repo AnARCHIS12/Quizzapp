@@ -34,6 +34,10 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
     super.initState();
     _loadUserAndCategories();
     _listenWs();
+    final ws = context.read<WebSocketService>();
+    if (ws.lastCategorySelectionStart != null) {
+      _applyCategorySelectionStart(ws.lastCategorySelectionStart!);
+    }
   }
 
   Future<void> _loadUserAndCategories() async {
@@ -44,6 +48,14 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
       if (user != null && mounted) {
         setState(() {
           _myUserId = user['id'] as int?;
+          final ws = context.read<WebSocketService>();
+          if (ws.lastCategorySelectionStart != null) {
+            final currentPicker = ws.lastCategorySelectionStart!['current_picker'] as int?;
+            if (currentPicker != null && currentPicker == _myUserId) {
+              _myTurn = true;
+              _statusMessage = 'C\'est votre tour de choisir une catégorie !';
+            }
+          }
         });
       }
     } catch (_) {}
@@ -75,6 +87,32 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
     }
   }
 
+  void _applyCategorySelectionStart(Map<String, dynamic> msg) {
+    final currentPicker = msg['current_picker'] as int?;
+    final isTurn = msg['your_turn'] == true ||
+        (_myUserId != null && currentPicker == _myUserId);
+
+    if (msg['categories'] != null && msg['categories'] is List) {
+      final list = (msg['categories'] as List)
+          .map((c) => CategoryModel.fromJson(c as Map<String, dynamic>))
+          .toList();
+      if (list.isNotEmpty) {
+        _allCategories = list;
+        _filteredCategories = list;
+      }
+    }
+
+    setState(() {
+      _myTurn = isTurn;
+      _picking = false;
+      _picksDone = (msg['picks_done'] as int?) ?? 0;
+      _totalPicks = (msg['total_picks'] as int?) ?? 6;
+      _statusMessage = _myTurn
+          ? 'C\'est votre tour de choisir une catégorie !'
+          : 'L\'adversaire choisit une catégorie...';
+    });
+  }
+
   void _listenWs() {
     final ws = context.read<WebSocketService>();
     _sub = ws.messages.listen((msg) {
@@ -82,31 +120,7 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
       final type = msg['type'];
       switch (type) {
         case 'category_selection_start':
-          final currentPicker = msg['current_picker'] as int?;
-          final isTurn = msg['your_turn'] == true ||
-              (_myUserId != null && currentPicker == _myUserId);
-
-          if (msg['categories'] != null && msg['categories'] is List) {
-            final list = (msg['categories'] as List)
-                .map((c) => CategoryModel.fromJson(c as Map<String, dynamic>))
-                .toList();
-            if (list.isNotEmpty) {
-              setState(() {
-                _allCategories = list;
-                _filteredCategories = list;
-              });
-            }
-          }
-
-          setState(() {
-            _myTurn = isTurn;
-            _picking = false;
-            _picksDone = (msg['picks_done'] as int?) ?? 0;
-            _totalPicks = (msg['total_picks'] as int?) ?? 6;
-            _statusMessage = _myTurn
-                ? 'C\'est votre tour de choisir une catégorie !'
-                : 'L\'adversaire choisit une catégorie...';
-          });
+          _applyCategorySelectionStart(msg);
           break;
 
         case 'category_picked':

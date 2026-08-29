@@ -8,6 +8,8 @@ class WebSocketService {
   WebSocketChannel? _channel;
   final _controller = StreamController<Map<String, dynamic>>.broadcast();
 
+  Map<String, dynamic>? lastCategorySelectionStart;
+
   Stream<Map<String, dynamic>> get messages => _controller.stream;
   bool get isConnected => _channel != null;
 
@@ -27,6 +29,11 @@ class WebSocketService {
           try {
             final data = json.decode(raw as String) as Map<String, dynamic>;
             debugPrint('[WebSocket IN] ${data['type']}');
+            if (data['type'] == 'category_selection_start') {
+              lastCategorySelectionStart = data;
+            } else if (data['type'] == 'room_created' || data['type'] == 'room_joined') {
+              lastCategorySelectionStart = null;
+            }
             _controller.add(data);
           } catch (e) {
             debugPrint('[WebSocket] JSON decode error: $e');
