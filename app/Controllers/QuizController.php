@@ -51,6 +51,14 @@ class QuizController
     }
 
     /**
+     * Show Android App Download / Showcase page
+     */
+    public function androidDownload(): void
+    {
+        View::render('android');
+    }
+
+    /**
      * Show quizzes in a category
      */
     public function showCategory(array $params): void

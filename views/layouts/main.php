@@ -185,6 +185,7 @@
                     <a href="/" class="text-sm font-medium hover:text-brand-500 transition-colors">Accueil</a>
                     <a href="/#categories-list" class="text-sm font-medium hover:text-brand-500 transition-colors">Quiz</a>
                     <a href="/duel" class="text-sm font-medium hover:text-brand-500 transition-colors">Duel Privé</a>
+                    <a href="/android" class="text-sm font-semibold text-violet-500 dark:text-violet-400 hover:text-violet-600 transition-colors">App Android</a>
                     <?php if (isset($_SESSION['user']) && (int)$_SESSION['user']['role_id'] === 1): ?>
                         <a href="/admin" class="text-sm font-semibold text-amber-500 dark:text-amber-400 hover:text-amber-600 transition-colors">Administration</a>
                     <?php endif; ?>
@@ -238,6 +239,7 @@
             <a href="/" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Accueil</a>
             <a href="/#categories-list" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Quiz</a>
             <a href="/duel" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Duel Privé</a>
+            <a href="/android" @click="mobileMenuOpen = false" class="block text-sm font-semibold text-violet-500 py-2 transition-colors">App Android</a>
             <?php if (isset($_SESSION['user'])): ?>
                 <a href="/dashboard" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Mon Tableau de Bord</a>
                 <a href="/settings" @click="mobileMenuOpen = false" class="block text-sm font-medium hover:text-brand-500 py-2 transition-colors">Paramètres</a>
@@ -277,7 +279,9 @@
     <!-- Footer -->
     <footer class="w-full py-8 mt-12 glass-card border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-400">
         <div class="max-w-7xl mx-auto px-4 space-y-3">
-            <div class="flex items-center justify-center space-x-6 text-xs sm:text-sm font-medium">
+            <div class="flex items-center justify-center space-x-6 text-xs sm:text-sm font-medium flex-wrap gap-y-2">
+                <a href="/android" class="hover:text-brand-500 dark:hover:text-violet-400 transition-colors font-semibold text-violet-500 dark:text-violet-400">Application Android</a>
+                <span class="text-slate-300 dark:text-slate-700">&bull;</span>
                 <a href="/privacy" class="hover:text-brand-500 dark:hover:text-violet-400 transition-colors">Politique de Confidentialité</a>
                 <span class="text-slate-300 dark:text-slate-700">&bull;</span>
                 <a href="/delete-account" class="hover:text-brand-500 dark:hover:text-violet-400 transition-colors">Suppression de Compte & Données</a>

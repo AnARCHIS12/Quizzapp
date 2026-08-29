@@ -41,6 +41,8 @@ $router = new Router($container);
 
 // A. Public / Quiz Navigation Routes
 $router->get('/', [QuizController::class, 'index']);
+$router->get('/android', [QuizController::class, 'androidDownload']);
+$router->get('/mobile', [QuizController::class, 'androidDownload']);
 $router->get('/privacy', [QuizController::class, 'privacy']);
 $router->get('/delete-account', [QuizController::class, 'deleteAccountInfo']);
 $router->get('/account-deletion', [QuizController::class, 'deleteAccountInfo']);
