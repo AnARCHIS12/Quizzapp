@@ -36,18 +36,129 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showCategoryDetails(CategoryModel category) {
+    final subcategories = _categories.where((c) => c.parentId == category.id).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1B4B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6D28D9).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF6D28D9).withValues(alpha: 0.5)),
+                    ),
+                    child: FaIcon(
+                      _CategoryCard.getCategoryIcon(category.slug),
+                      color: const Color(0xFF6D28D9),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${subcategories.length} sous-thématiques disponibles',
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (subcategories.isNotEmpty) ...[
+                const Text(
+                  'Sous-catégories sélectionnables en duel :',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: subcategories.map((sub) {
+                    return Chip(
+                      backgroundColor: const Color(0xFF6D28D9).withValues(alpha: 0.15),
+                      side: BorderSide(color: const Color(0xFF6D28D9).withValues(alpha: 0.4)),
+                      label: Text(
+                        sub.name,
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+              ] else ...[
+                const Text(
+                  'Catégorie générale avec questions variées générées par l\'IA.',
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
+              ],
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D28D9),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  context.go('/duel');
+                },
+                icon: const FaIcon(FontAwesomeIcons.gamepad, size: 16),
+                label: const Text(
+                  'Lancer un duel multijoueur',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final topLevel = _categories.where((c) => !c.isSubcategory).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const FaIcon(FontAwesomeIcons.solidStar, color: Colors.amberAccent, size: 18),
-            const SizedBox(width: 8),
-            const Text('QuizzApp', style: TextStyle(fontWeight: FontWeight.bold)),
+            FaIcon(FontAwesomeIcons.solidStar, color: Colors.amberAccent, size: 18),
+            SizedBox(width: 8),
+            Text('QuizzApp', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -73,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF6D28D9).withOpacity(0.3),
+                  color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 6),
                 ),
@@ -146,7 +257,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisSpacing: 12,
                       ),
                       itemCount: topLevel.length,
-                      itemBuilder: (ctx, i) => _CategoryCard(category: topLevel[i]),
+                      itemBuilder: (ctx, i) => _CategoryCard(
+                        category: topLevel[i],
+                        onTap: () => _showCategoryDetails(topLevel[i]),
+                      ),
                     ),
                   ),
           ),
@@ -158,7 +272,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _CategoryCard extends StatelessWidget {
   final CategoryModel category;
-  const _CategoryCard({required this.category});
+  final VoidCallback onTap;
+
+  const _CategoryCard({
+    required this.category,
+    required this.onTap,
+  });
 
   static const _colors = [
     Color(0xFF6D28D9),
@@ -171,7 +290,7 @@ class _CategoryCard extends StatelessWidget {
     Color(0xFF14B8A6),
   ];
 
-  IconData _getCategoryIcon(String slug) {
+  static IconData getCategoryIcon(String slug) {
     switch (slug) {
       case 'histoire':
         return FontAwesomeIcons.landmark;
@@ -203,27 +322,20 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _colors[category.id % _colors.length];
     return Card(
-      color: color.withOpacity(0.18),
+      color: color.withValues(alpha: 0.18),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.4)),
+        side: BorderSide(color: color.withValues(alpha: 0.4)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Catégorie ${category.name} sélectionnable en Duel !'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              FaIcon(_getCategoryIcon(category.slug), color: color, size: 26),
+              FaIcon(getCategoryIcon(category.slug), color: color, size: 26),
               const SizedBox(height: 8),
               Text(
                 category.name,
