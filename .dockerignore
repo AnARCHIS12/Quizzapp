@@ -4,6 +4,10 @@
 .github
 .idea
 .vscode
+.qodo
+
+# --- Mobile Flutter app (2+ GB of Gradle/SDK/Build cache) ---
+quizzapp_mobile/
 
 # --- Local dev overrides ---
 .env
@@ -12,31 +16,27 @@
 
 # --- Tests & Dev dependencies ---
 tests/
+scratch/
 *.test.php
 
 # --- Logs ---
 logs/
 *.log
 
-# --- Documentation & Metadata ---
+# --- Documentation & Assets ---
 README.md
 LICENSE
 *.md
-*.png
-*.jpg
-*.jpeg
 
-# --- Docker meta (keep nginx.conf for Nginx image build)
+# --- Composer local cache & vendor ---
+vendor/
+.composer/
+
+# --- Docker meta ---
 docker/Dockerfile.nginx
 docker-compose.yml
 docker-compose.*.yml
 Dockerfile
+Dockerfile.app
 .dockerignore
 bin/docker-build-push.sh
-
-# --- Database seed & migration (embedded at runtime) ---
-# Keep these — needed inside container
-# database/
-
-# --- Composer cache ---
-.composer/
