@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -41,10 +42,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('⚡ QuizzApp', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const FaIcon(FontAwesomeIcons.solidStar, color: Colors.amberAccent, size: 18),
+            const SizedBox(width: 8),
+            const Text('QuizzApp', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const FaIcon(FontAwesomeIcons.solidUser, size: 18),
             tooltip: 'Profil',
             onPressed: () => context.go('/profile'),
           ),
@@ -76,8 +84,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Row(
                   children: [
+                    FaIcon(FontAwesomeIcons.gamepad, color: Colors.white, size: 20),
+                    SizedBox(width: 10),
                     Text(
-                      '⚔️ Duel en temps réel',
+                      'Duel en temps réel',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -98,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     foregroundColor: const Color(0xFF6D28D9),
                   ),
                   onPressed: () => context.go('/duel'),
-                  icon: const Icon(Icons.sports_esports_rounded),
+                  icon: const FaIcon(FontAwesomeIcons.play, size: 16),
                   label: const Text('Lancer un duel', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
@@ -108,6 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
+                FaIcon(FontAwesomeIcons.layerGroup, size: 16, color: Colors.white70),
+                SizedBox(width: 8),
                 Text(
                   'Catégories disponibles',
                   style: TextStyle(
@@ -159,6 +171,34 @@ class _CategoryCard extends StatelessWidget {
     Color(0xFF14B8A6),
   ];
 
+  IconData _getCategoryIcon(String slug) {
+    switch (slug) {
+      case 'histoire':
+        return FontAwesomeIcons.landmark;
+      case 'geographie':
+        return FontAwesomeIcons.earthEurope;
+      case 'sciences':
+      case 'sciences-nature':
+        return FontAwesomeIcons.flask;
+      case 'cinema':
+        return FontAwesomeIcons.film;
+      case 'informatique':
+        return FontAwesomeIcons.code;
+      case 'litterature':
+        return FontAwesomeIcons.bookOpen;
+      case 'musique':
+        return FontAwesomeIcons.music;
+      case 'sport':
+        return FontAwesomeIcons.futbol;
+      case 'mythologie':
+        return FontAwesomeIcons.shieldHalved;
+      case 'art-peinture':
+        return FontAwesomeIcons.palette;
+      default:
+        return FontAwesomeIcons.shapes;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _colors[category.id % _colors.length];
@@ -183,7 +223,7 @@ class _CategoryCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.category_rounded, color: color, size: 28),
+              FaIcon(_getCategoryIcon(category.slug), color: color, size: 26),
               const SizedBox(height: 8),
               Text(
                 category.name,

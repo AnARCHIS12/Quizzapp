@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/websocket_service.dart';
@@ -81,7 +82,7 @@ class _GeneratingScreenState extends State<GeneratingScreen>
                       ],
                     ),
                     child: const Center(
-                      child: Text('🤖', style: TextStyle(fontSize: 54)),
+                      child: FaIcon(FontAwesomeIcons.robot, size: 50, color: Colors.white),
                     ),
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
@@ -59,8 +60,8 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
             _picksDone = (msg['picks_done'] as int?) ?? 0;
             _totalPicks = (msg['total_picks'] as int?) ?? 6;
             _statusMessage = _myTurn
-                ? '👆 C\'est votre tour de choisir une catégorie !'
-                : '⏳ L\'adversaire est en train de choisir...';
+                ? 'C\'est votre tour de choisir une catégorie !'
+                : 'L\'adversaire est en train de choisir...';
           });
           break;
         case 'category_picked':
@@ -69,8 +70,8 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
             _picksDone = (msg['picks_done'] as int?) ?? (_picksDone + 1);
             _myTurn = msg['next_is_me'] == true || msg['your_turn'] == true;
             _statusMessage = _myTurn
-                ? '👆 À votre tour de choisir !'
-                : '⏳ L\'adversaire est en train de choisir...';
+                ? 'À votre tour de choisir !'
+                : 'L\'adversaire est en train de choisir...';
           });
           break;
         case 'generating_questions':
@@ -81,7 +82,7 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
           if (mounted) context.go('/duel/play/${widget.roomCode}');
           break;
         case 'player_ready':
-          setState(() => _statusMessage = '✅ Joueurs prêts ! Démarrage du tirage...');
+          setState(() => _statusMessage = 'Joueurs prêts ! Démarrage du tirage...');
           break;
       }
     });
@@ -121,14 +122,27 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
             ),
             child: Column(
               children: [
-                Text(
-                  _statusMessage,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: _myTurn ? Colors.amberAccent : Colors.white70,
-                  ),
-                  textAlign: TextAlign.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FaIcon(
+                      _myTurn ? FontAwesomeIcons.handPointRight : FontAwesomeIcons.hourglassHalf,
+                      color: _myTurn ? Colors.amberAccent : Colors.white70,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        _statusMessage,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: _myTurn ? Colors.amberAccent : Colors.white70,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 ClipRRect(
@@ -221,7 +235,7 @@ class _CategoryTile extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.category_rounded, color: color, size: 28),
+                FaIcon(FontAwesomeIcons.layerGroup, color: color, size: 24),
                 const SizedBox(height: 6),
                 Text(
                   category.name,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -24,10 +25,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _load() async {
     try {
       final data = await context.read<ApiService>().getProfile();
-      if (mounted) setState(() {
-        _data = data;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _data = data;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
@@ -81,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const FaIcon(FontAwesomeIcons.arrowRightFromBracket, size: 18),
             tooltip: 'Déconnexion',
             onPressed: _logout,
           ),
@@ -125,11 +128,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        _StatCard(label: 'Niveau', value: '${user.level}', icon: Icons.stars_rounded),
+                        _StatCard(label: 'Niveau', value: '${user.level}', icon: FontAwesomeIcons.solidStar),
                         const SizedBox(width: 12),
-                        _StatCard(label: 'XP Total', value: '${user.xp}', icon: Icons.bolt_rounded),
+                        _StatCard(label: 'XP Total', value: '${user.xp}', icon: FontAwesomeIcons.bolt),
                         const SizedBox(width: 12),
-                        _StatCard(label: 'Parties', value: '${user.totalPlayed}', icon: Icons.sports_esports_rounded),
+                        _StatCard(label: 'Parties', value: '${user.totalPlayed}', icon: FontAwesomeIcons.gamepad),
                       ],
                     ),
                     const SizedBox(height: 28),
@@ -172,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         (m) => Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-                            leading: const Icon(Icons.sports_esports_outlined, color: Color(0xFF6D28D9)),
+                            leading: const FaIcon(FontAwesomeIcons.gamepad, color: Color(0xFF6D28D9), size: 20),
                             title: Text(
                               m['quiz_title'] as String? ?? 'Duel thématique',
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
@@ -196,7 +199,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Center(
                       child: TextButton.icon(
                         onPressed: () => context.push('/privacy'),
-                        icon: const Icon(Icons.privacy_tip_outlined, size: 16, color: Colors.white38),
+                        icon: const FaIcon(FontAwesomeIcons.shieldHalved, size: 14, color: Colors.white38),
                         label: const Text(
                           'Politique de confidentialité & RGPD',
                           style: TextStyle(color: Colors.white38, fontSize: 12),
@@ -227,7 +230,7 @@ class _StatCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, color: const Color(0xFF6D28D9), size: 22),
+            FaIcon(icon, color: const Color(0xFF6D28D9), size: 20),
             const SizedBox(height: 6),
             Text(
               value,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/websocket_service.dart';
@@ -20,7 +21,7 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
   QuestionModel? _question;
   int _myScore = 0;
   int _opponentScore = 0;
-  String _opponentName = 'Adversaire';
+  final String _opponentName = 'Adversaire';
   int? _selectedAnswerId;
   bool _answered = false;
   bool _correct = false;
@@ -107,10 +108,10 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
       final isWinner = _myScore > _opponentScore;
       final isDraw = _myScore == _opponentScore;
       _gameOverMessage = isDraw
-          ? '🤝 Égalité parfaite !'
+          ? 'Égalité parfaite !'
           : isWinner
-              ? '🏆 Victoire écrasante !'
-              : '😔 Défaite, tentez votre revanche !';
+              ? 'Victoire écrasante !'
+              : 'Défaite, tentez votre revanche !';
     });
   }
 
@@ -255,10 +256,10 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              _correct ? Icons.check_circle : Icons.info_outline,
+                            FaIcon(
+                              _correct ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleInfo,
                               color: _correct ? Colors.greenAccent : Colors.redAccent,
-                              size: 20,
+                              size: 18,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -283,6 +284,8 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
 
   Widget _buildGameOver() {
     final isWin = _myScore > _opponentScore;
+    final isDraw = _myScore == _opponentScore;
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -290,15 +293,20 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              FaIcon(
                 isWin
-                    ? '🏆'
-                    : _myScore == _opponentScore
-                        ? '🤝'
-                        : '😔',
-                style: const TextStyle(fontSize: 72),
+                    ? FontAwesomeIcons.trophy
+                    : isDraw
+                        ? FontAwesomeIcons.handshake
+                        : FontAwesomeIcons.faceFrown,
+                size: 64,
+                color: isWin
+                    ? Colors.amberAccent
+                    : isDraw
+                        ? Colors.blueAccent
+                        : Colors.redAccent,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Text(
                 _gameOverMessage,
                 style: const TextStyle(
@@ -325,7 +333,7 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
                   context.read<WebSocketService>().playAgain();
                   context.go('/duel/pick/${widget.roomCode}');
                 },
-                icon: const Icon(Icons.replay_rounded),
+                icon: const FaIcon(FontAwesomeIcons.rotateRight, size: 16),
                 label: const Text('Rejouer un duel'),
               ),
               const SizedBox(height: 12),
@@ -381,12 +389,18 @@ class _ScoreBar extends StatelessWidget {
             ],
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: const Color(0xFF6D28D9).withOpacity(0.3),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text('⚔️ DUEL', style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold)),
+            child: const Row(
+              children: [
+                FaIcon(FontAwesomeIcons.gamepad, size: 13, color: Colors.amberAccent),
+                SizedBox(width: 6),
+                Text('DUEL', style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+              ],
+            ),
           ),
           Column(
             children: [
@@ -427,7 +441,7 @@ class _TimerBadge extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.timer_outlined, color: color, size: 16),
+          FaIcon(FontAwesomeIcons.stopwatch, color: color, size: 14),
           const SizedBox(width: 6),
           Text(
             '${seconds}s',

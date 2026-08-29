@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
@@ -97,7 +98,14 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('⚔️ Duel en Direct'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FaIcon(FontAwesomeIcons.gamepad, size: 18, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Duel en Direct'),
+          ],
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
@@ -110,7 +118,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _ActionCard(
-                icon: Icons.add_circle_outline_rounded,
+                icon: FontAwesomeIcons.circlePlus,
                 title: 'Créer une salle de duel',
                 subtitle: 'Générez un code et invitez un ami',
                 color: const Color(0xFF6D28D9),
@@ -193,12 +201,15 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
                   hintText: 'CODE SALLE',
                   hintStyle: TextStyle(color: Colors.white24, letterSpacing: 4, fontSize: 16),
                   counterText: '',
-                  prefixIcon: Icon(Icons.pin, color: Colors.white54),
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.all(14),
+                    child: FaIcon(FontAwesomeIcons.hashtag, size: 16, color: Colors.white54),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               _ActionCard(
-                icon: Icons.login_rounded,
+                icon: FontAwesomeIcons.arrowRightToBracket,
                 title: 'Rejoindre la partie',
                 subtitle: 'Entrez dans la salle créée par votre ami',
                 color: const Color(0xFF4F46E5),
@@ -255,7 +266,7 @@ class _ActionCard extends StatelessWidget {
                       height: 32,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                     )
-                  : Icon(icon, color: color, size: 36),
+                  : FaIcon(icon, color: color, size: 30),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

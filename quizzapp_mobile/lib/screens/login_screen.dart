@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -61,14 +62,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    '👋 Connexion',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const FaIcon(FontAwesomeIcons.rightToBracket, color: Color(0xFF6D28D9), size: 24),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Connexion',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -82,7 +89,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'Pseudo ou e-mail',
-                      prefixIcon: Icon(Icons.person_outline, color: Colors.white54),
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.all(14),
+                        child: FaIcon(FontAwesomeIcons.user, size: 16, color: Colors.white54),
+                      ),
                     ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Veuillez saisir votre identifiant' : null,
@@ -94,11 +104,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Mot de passe',
-                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.white54),
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: FaIcon(FontAwesomeIcons.lock, size: 16, color: Colors.white54),
+                      ),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility : Icons.visibility_off,
+                        icon: FaIcon(
+                          _obscure ? FontAwesomeIcons.eye : FontAwesomeIcons.eyeSlash,
                           color: Colors.white54,
+                          size: 16,
                         ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
@@ -122,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.login),
+                        : const FaIcon(FontAwesomeIcons.arrowRightToBracket, size: 16),
                     label: Text(_loading ? 'Connexion en cours...' : 'Se connecter'),
                   ),
                   const SizedBox(height: 16),
