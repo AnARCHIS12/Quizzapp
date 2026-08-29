@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -19,14 +20,57 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
   bool _connecting = false;
   String? _error;
   String? _waitingCode;
+  StreamSubscription<Map<String, dynamic>>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenWs();
+  }
+
+  void _listenWs() {
+    final ws = context.read<WebSocketService>();
+    _sub = ws.messages.listen((msg) {
+      if (!mounted) return;
+      final type = msg['type'];
+      switch (type) {
+        case 'room_created':
+          final code = (msg['room_code'] ?? msg['code'] ?? '') as String;
+          setState(() {
+            _waitingCode = code;
+            _connecting = false;
+            _error = null;
+          });
+          break;
+        case 'player_joined':
+        case 'category_selection_start':
+          if (_waitingCode != null) {
+            final target = _waitingCode!;
+            context.go('/duel/pick/$target');
+          }
+          break;
+        case 'room_joined':
+          final code = (msg['room_code'] ?? msg['code'] ?? _codeCtrl.text.trim().toUpperCase()) as String;
+          context.go('/duel/pick/$code');
+          break;
+        case 'error':
+          setState(() {
+            _error = msg['message'] as String? ?? 'Erreur de connexion au salon.';
+            _connecting = false;
+          });
+          break;
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _sub?.cancel();
     _codeCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _connectWs() async {
+  Future<bool> _connectWs() async {
     final api = context.read<ApiService>();
     final ws = context.read<WebSocketService>();
     setState(() {
@@ -37,34 +81,23 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
       final serverUrl = await api.getServerUrl();
       final token = await api.getWsToken();
       await ws.connect(serverUrl, token);
+      return true;
     } catch (e) {
-      setState(() {
-        _error = 'Connexion au serveur de duel échouée.';
-        _connecting = false;
-      });
-      return;
+      if (mounted) {
+        setState(() {
+          _error = 'Impossible de contacter le serveur WebSocket.';
+          _connecting = false;
+        });
+      }
+      return false;
     }
-    setState(() => _connecting = false);
   }
 
   Future<void> _createRoom() async {
-    await _connectWs();
-    if (_error != null || !mounted) return;
+    final connected = await _connectWs();
+    if (!connected || !mounted) return;
 
     final ws = context.read<WebSocketService>();
-
-    ws.messages.firstWhere((m) => m['type'] == 'room_created').then((msg) {
-      if (!mounted) return;
-      final code = msg['code'] as String;
-      setState(() => _waitingCode = code);
-
-      ws.messages
-          .firstWhere((m) => m['type'] == 'player_joined' || m['type'] == 'category_selection_start')
-          .then((_) {
-        if (mounted) context.go('/duel/pick/$code');
-      });
-    });
-
     ws.createRoom();
   }
 
@@ -75,22 +108,10 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
       return;
     }
 
-    await _connectWs();
-    if (_error != null || !mounted) return;
+    final connected = await _connectWs();
+    if (!connected || !mounted) return;
 
     final ws = context.read<WebSocketService>();
-
-    ws.messages
-        .firstWhere((m) => m['type'] == 'room_joined' || m['type'] == 'error' || m['type'] == 'category_selection_start')
-        .then((msg) {
-      if (!mounted) return;
-      if (msg['type'] == 'error') {
-        setState(() => _error = msg['message'] as String? ?? 'Erreur lors de l\'accès à la salle.');
-      } else {
-        context.go('/duel/pick/$code');
-      }
-    });
-
     ws.joinRoom(code);
   }
 
@@ -135,7 +156,7 @@ class _DuelLobbyScreenState extends State<DuelLobbyScreen> {
                     border: Border.all(color: const Color(0xFF6D28D9), width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6D28D9).withOpacity(0.3),
+                        color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
                         blurRadius: 15,
                       ),
                     ],
@@ -248,10 +269,10 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: color.withOpacity(0.18),
+      color: color.withValues(alpha: 0.18),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.5)),
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),

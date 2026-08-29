@@ -121,13 +121,14 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
       _selectedAnswerId = answerId;
       _answered = true;
     });
-    final elapsed = _questionStart != null
+    final elapsedMs = _questionStart != null
         ? DateTime.now().difference(_questionStart!).inMilliseconds
         : 0;
     context.read<WebSocketService>().submitAnswer(
+          roomCode: widget.roomCode,
           questionIndex: _questionIndex,
-          answerId: answerId ?? -1,
-          timeMs: elapsed,
+          answerId: answerId,
+          timeSpentSeconds: elapsedMs / 1000.0,
         );
   }
 
@@ -330,7 +331,7 @@ class _DuelGameScreenState extends State<DuelGameScreen> {
               const SizedBox(height: 36),
               ElevatedButton.icon(
                 onPressed: () {
-                  context.read<WebSocketService>().playAgain();
+                  context.read<WebSocketService>().playAgain(widget.roomCode);
                   context.go('/duel/pick/${widget.roomCode}');
                 },
                 icon: const FaIcon(FontAwesomeIcons.rotateRight, size: 16),

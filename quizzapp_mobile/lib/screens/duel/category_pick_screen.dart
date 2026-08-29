@@ -88,14 +88,14 @@ class _CategoryPickScreenState extends State<CategoryPickScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<WebSocketService>().setReady();
+      context.read<WebSocketService>().setReady(widget.roomCode);
     });
   }
 
   void _pickCategory(int catId) {
     if (!_myTurn || _picking) return;
     setState(() => _picking = true);
-    context.read<WebSocketService>().pickCategory(catId);
+    context.read<WebSocketService>().pickCategory(widget.roomCode, catId);
   }
 
   @override
