@@ -402,14 +402,21 @@ class WebSocketServer implements MessageComponentInterface
 
         Database::query("UPDATE matches SET status = 'selecting' WHERE room_code = ?", [$code]);
 
-        $this->broadcast($code, [
-            'type'           => 'category_selection_start',
-            'pick_order'     => $pickOrder,
-            'current_picker' => $pickOrder[0],
-            'picks_per_player' => $picksEach,
-            'categories'     => $categories,
-            'picked'         => []
-        ]);
+        $firstPicker = $pickOrder[0] ?? null;
+        foreach ($room['players'] as $rId => $player) {
+            if (isset($this->clients[$rId])) {
+                $isTurn = ((int)$firstPicker === (int)$player['user_id']);
+                $this->clients[$rId]->send(json_encode([
+                    'type'             => 'category_selection_start',
+                    'pick_order'       => $pickOrder,
+                    'current_picker'   => $firstPicker,
+                    'your_turn'        => $isTurn,
+                    'picks_per_player' => $picksEach,
+                    'categories'       => $categories,
+                    'picked'           => []
+                ]));
+            }
+        }
     }
 
     /**
@@ -557,15 +564,23 @@ class WebSocketServer implements MessageComponentInterface
                 });
             }
         } else {
-            $this->broadcast($code, [
-                'type'           => 'category_picked',
-                'picked_by'      => $userId,
-                'category'       => $cat,
-                'current_picker' => $room['pick_order'][$nextPickIndex],
-                'picks_done'     => $nextPickIndex,
-                'total_picks'    => $totalPicks,
-                'all_picked'     => $allPicked
-            ]);
+            $nextPicker = $room['pick_order'][$nextPickIndex] ?? null;
+            foreach ($room['players'] as $rId => $player) {
+                if (isset($this->clients[$rId])) {
+                    $isTurn = ((int)$nextPicker === (int)$player['user_id']);
+                    $this->clients[$rId]->send(json_encode([
+                        'type'           => 'category_picked',
+                        'picked_by'      => $userId,
+                        'category'       => $cat,
+                        'current_picker' => $nextPicker,
+                        'your_turn'      => $isTurn,
+                        'next_is_me'     => $isTurn,
+                        'picks_done'     => $nextPickIndex,
+                        'total_picks'    => $totalPicks,
+                        'all_picked'     => $allPicked
+                    ]));
+                }
+            }
         }
     }
 

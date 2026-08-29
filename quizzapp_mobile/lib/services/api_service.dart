@@ -126,6 +126,15 @@ class ApiService {
     final data = _parse(res);
     return List<Map<String, dynamic>>.from(data['leaderboard'] as List);
   }
+
+  Future<Map<String, dynamic>> updateAvatar(String avatarUrl) async {
+    final res = await http.post(
+      await _uri('/api/profile/avatar'),
+      headers: await _headers,
+      body: json.encode({'avatar_url': avatarUrl}),
+    );
+    return _parse(res);
+  }
 }
 
 class ApiException implements Exception {

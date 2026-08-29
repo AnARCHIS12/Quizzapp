@@ -349,6 +349,61 @@ class ApiController
             $this->error('Utilisateur introuvable.', 404);
         }
 
+        // Achievements computation
+        $allAchievements = Database::fetchAll("SELECT * FROM achievements ORDER BY id ASC");
+        if (empty($allAchievements)) {
+            $allAchievements = [
+                ['id' => 1, 'name' => 'Premier pas', 'description' => 'Complétez votre premier quiz.', 'badge_image' => 'badge_first_quiz.png', 'criteria_type' => 'quizzes_played', 'criteria_value' => 1],
+                ['id' => 2, 'name' => 'Passionné', 'description' => 'Complétez 10 quiz.', 'badge_image' => 'badge_10_quizzes.png', 'criteria_type' => 'quizzes_played', 'criteria_value' => 10],
+                ['id' => 3, 'name' => 'Expert', 'description' => 'Complétez 50 quiz.', 'badge_image' => 'badge_50_quizzes.png', 'criteria_type' => 'quizzes_played', 'criteria_value' => 50],
+                ['id' => 4, 'name' => 'Nouveau Niveau', 'description' => 'Atteignez le niveau 5.', 'badge_image' => 'badge_level_5.png', 'criteria_type' => 'level_reached', 'criteria_value' => 5],
+                ['id' => 5, 'name' => 'Maître du Quiz', 'description' => 'Atteignez le niveau 10.', 'badge_image' => 'badge_level_10.png', 'criteria_type' => 'level_reached', 'criteria_value' => 10],
+                ['id' => 6, 'name' => 'Sans Faute', 'description' => 'Obtenez un score parfait de 100% sur un quiz.', 'badge_image' => 'badge_perfect_score.png', 'criteria_type' => 'perfect_score', 'criteria_value' => 1],
+            ];
+        }
+
+        $userAchievements = User::getAchievements((int)$auth['id']);
+        $unlockedMap = [];
+        foreach ($userAchievements as $ua) {
+            $unlockedMap[(int)$ua['id']] = $ua['unlocked_at'];
+        }
+
+        // Auto unlock based on stats if not yet registered in DB
+        $totalPlayed = (int)($stats['total_played'] ?? 0);
+        $level = (int)($stats['level'] ?? 1);
+        $correctCount = (int)($stats['correct_count'] ?? 0);
+
+        $formattedAchievements = [];
+        foreach ($allAchievements as $ach) {
+            $achId = (int)$ach['id'];
+            $isUnlocked = isset($unlockedMap[$achId]);
+
+            if (!$isUnlocked) {
+                if ($ach['criteria_type'] === 'quizzes_played' && $totalPlayed >= (int)$ach['criteria_value']) {
+                    $isUnlocked = true;
+                    Database::query("INSERT IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)", [(int)$auth['id'], $achId]);
+                } elseif ($ach['criteria_type'] === 'level_reached' && $level >= (int)$ach['criteria_value']) {
+                    $isUnlocked = true;
+                    Database::query("INSERT IGNORE INTO user_achievements (user_id, achievement_id) VALUES (?, ?)", [(int)$auth['id'], $achId]);
+                }
+            }
+
+            $formattedAchievements[] = [
+                'id'            => $achId,
+                'name'          => $ach['name'],
+                'description'   => $ach['description'],
+                'badge_image'   => $ach['badge_image'] ?? 'badge_default.png',
+                'criteria_type' => $ach['criteria_type'],
+                'criteria_value'=> (int)$ach['criteria_value'],
+                'is_unlocked'   => $isUnlocked,
+                'unlocked_at'   => $unlockedMap[$achId] ?? ($isUnlocked ? date('Y-m-d H:i:s') : null),
+            ];
+        }
+
+        $totalQuestionsPlayed = $totalPlayed * 10;
+        $successRate = $totalPlayed > 0 ? round(($correctCount / max(1, $totalQuestionsPlayed)) * 100, 1) : 0.0;
+        $avgTime = round((float)($stats['average_time_per_question'] ?? 0.0), 1);
+
         $this->json([
             'success' => true,
             'user' => [
@@ -358,12 +413,52 @@ class ApiController
                 'avatar_url'    => $user['avatar_url'] ?? null,
                 'role_id'       => (int)$user['role_id'],
                 'created_at'    => $user['created_at'],
-                'level'         => (int)($stats['level'] ?? 1),
+                'level'         => $level,
                 'xp'            => (int)($stats['xp'] ?? 0),
-                'total_played'  => (int)($stats['total_played'] ?? 0),
-                'correct_count' => (int)($stats['correct_count'] ?? 0),
+                'total_played'  => $totalPlayed,
+                'correct_count' => $correctCount,
+                'success_rate'  => $successRate,
+                'average_time'  => $avgTime,
             ],
+            'stats' => [
+                'level'         => $level,
+                'xp'            => (int)($stats['xp'] ?? 0),
+                'total_played'  => $totalPlayed,
+                'correct_count' => $correctCount,
+                'success_rate'  => $successRate,
+                'average_time'  => $avgTime,
+            ],
+            'achievements' => $formattedAchievements,
             'history' => $history,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // POST /api/profile/avatar  — Update user avatar
+    // Body: { "avatar_url": "..." }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function updateAvatar(): void
+    {
+        $auth = $this->authUser();
+        if (!$auth) {
+            $this->error('Non authentifié.', 401);
+        }
+
+        $userId = (int)$auth['id'];
+        $body = $this->bodyJson();
+        $avatarUrl = trim($body['avatar_url'] ?? '');
+
+        if (empty($avatarUrl)) {
+            $this->error('URL ou identifiant de l\'avatar requis.');
+        }
+
+        User::update($userId, ['avatar_url' => $avatarUrl]);
+
+        $this->json([
+            'success'    => true,
+            'avatar_url' => $avatarUrl,
+            'message'    => 'Avatar mis à jour avec succès.'
         ]);
     }
 

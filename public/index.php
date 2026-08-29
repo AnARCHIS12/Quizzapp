@@ -108,6 +108,7 @@ $router->post('/api/quiz/generate',       [ApiController::class, 'generateSoloQu
 $router->post('/api/quiz/submit',         [ApiController::class, 'submitSoloScore']);
 $router->get('/api/leaderboard',          [ApiController::class, 'leaderboard']);
 $router->get('/api/profile',              [ApiController::class, 'profile']);
+$router->post('/api/profile/avatar',       [ApiController::class, 'updateAvatar']);
 $router->get('/api/ws-token',             [ApiController::class, 'wsToken']);
 
 // 6. Dispatch router Request
