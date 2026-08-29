@@ -35,6 +35,14 @@ class QuizController
     }
 
     /**
+     * Show Privacy Policy page (for Play Store & RGPD compliance)
+     */
+    public function privacy(): void
+    {
+        View::render('privacy');
+    }
+
+    /**
      * Show quizzes in a category
      */
     public function showCategory(array $params): void

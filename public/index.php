@@ -41,6 +41,7 @@ $router = new Router($container);
 
 // A. Public / Quiz Navigation Routes
 $router->get('/', [QuizController::class, 'index']);
+$router->get('/privacy', [QuizController::class, 'privacy']);
 $router->get('/category/{slug}', [QuizController::class, 'showCategory']);
 $router->get('/quiz/{id}', [QuizController::class, 'play']);
 $router->get('/quiz/dynamic/{id}', [QuizController::class, 'playDynamic']);

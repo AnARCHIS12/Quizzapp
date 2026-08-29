@@ -1,0 +1,11 @@
+# Modèle pour la clé de signature Play Store (Google Play Console)
+# 1. Générez votre keystore avec la commande :
+#    keytool -genkey -v -keystore ~/quizzapp-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias quizzapp
+# 2. Copiez ce fichier en 'key.properties' (dans le dossier quizzapp_mobile/android/) :
+#    cp key.properties.example key.properties
+# 3. Renseignez vos valeurs :
+
+keyAlias=quizzapp
+keyPassword=VOTRE_MOT_DE_PASSE_CLE
+storeFile=/home/anar/quizzapp-release-key.jks
+storePassword=VOTRE_MOT_DE_PASSE_KEYSTORE
