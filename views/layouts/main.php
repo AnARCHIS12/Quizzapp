@@ -275,9 +275,14 @@
     </main>
 
     <!-- Footer -->
-    <footer class="w-full py-6 mt-12 glass-card border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-400">
-        <div class="max-w-7xl mx-auto px-4">
-            <p>&copy; 2026 Quizzapp. Tous droits réservés. Construit avec neutralité éditoriale stricte.</p>
+    <footer class="w-full py-8 mt-12 glass-card border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 space-y-3">
+            <div class="flex items-center justify-center space-x-6 text-xs sm:text-sm font-medium">
+                <a href="/privacy" class="hover:text-brand-500 dark:hover:text-violet-400 transition-colors">Politique de Confidentialité</a>
+                <span class="text-slate-300 dark:text-slate-700">&bull;</span>
+                <a href="/delete-account" class="hover:text-brand-500 dark:hover:text-violet-400 transition-colors">Suppression de Compte & Données</a>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500">&copy; 2026 QuizzApp. Tous droits réservés.</p>
         </div>
     </footer>
 
